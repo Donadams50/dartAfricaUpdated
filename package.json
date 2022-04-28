@@ -1,0 +1,39 @@
+{
+  "name": "dartafrica",
+  "version": "1.0.0",
+  "description": "Dart Africa",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "axios": "^0.19.2",
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.19.0",
+    "cloudinary": "^1.21.0",
+    "cookie-parser": "~1.4.4",
+    "cors": "^2.8.5",
+    "debug": "~2.6.9",
+    "dotenv": "^8.2.0",
+    "express": "~4.16.1",
+    "firebase-admin": "^10.0.0",
+    "jsonwebtoken": "^8.5.1",
+    "lazerpay-node-sdk": "^0.1.9",
+    "moment": "^2.29.1",
+    "mongoose": "^5.10.2",
+    "multer": "^1.4.2",
+    "multer-storage-cloudinary": "^2.2.1",
+    "node-cron": "^3.0.0",
+    "nodemailer": "^2.7.2",
+    "nodemailer-express-handlebars": "^4.0.0",
+    "nodemon": "^2.0.6",
+    "passport": "^0.4.0",
+    "passport-jwt": "^4.0.0",
+    "uuid": "^7.0.2",
+    "verify-hmac-sha": "^1.3.3",
+    "winston": "^3.3.3"
+  },
+  "author": "Olasumbo",
+  "license": "ISC"
+}
