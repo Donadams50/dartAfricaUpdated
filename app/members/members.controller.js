@@ -914,7 +914,7 @@ exports.findAllMembers = async (req, res) => {
                     res.status(400).send({ status: 400, message:"You can get admin users "})
                 }else{
                     if(limit){
-                        const findAllMembers = await Members.find({role: role}).sort({"_id": -1}).limit(lim)
+                        const findAllMembers = await Members.find({role: role}).sort({"_id": -1}).limit(limit)
                     console.log(findAllMembers)
                     res.status(200).send( {status: 200, message: findAllMembers})
                     }else{

@@ -4,6 +4,7 @@ const Members = db.profiles;
 const Trades = db.trades;
 const Withdrawrequest = db.withdrawrequests
 const axios = require('axios');
+const moment  = require('moment')
 const sendemail = require('../helpers/emailhelper.js');
 const dotenv=require('dotenv');
 dotenv.config();
@@ -175,8 +176,8 @@ exports.getConfiguration = async (req, res) => {
   };
 
 
-  // admin analytics
-  exports.adminAnalytics = async (req, res) => {
+  // admin analytics all time
+  exports.adminAnalyticsAlltime = async (req, res) => {
     try{
       
 
@@ -349,6 +350,73 @@ exports.getConfiguration = async (req, res) => {
   };
 
 
+  
+  exports.adminAnalyticsFilter = async (req, res) => {
+    try{
+       const type = req.params.filterType
+       const lim = req.query.limit
+       const role = "Seller"
+       const query = getQueryNoAmount({ ...req.query })
+       console.log(type)
+       if(type === "Balance"){
+            if(lim){
+                const findAllMembers = await Members.find({role: role, walletBalance: { $gt: 0 }},{ username: 1, walletBalance: 1 ,email: 1, country: 1, phoneNumber: 1 }).sort({"_id": -1}).limit(lim)
+                console.log(findAllMembers)
+                res.status(200).send({status: 200, message:findAllMembers})
+            }else{
+                const findAllMembers = await Members.find({role: role, walletBalance: { $gt: 0 }}, { username: 1, walletBalance: 1 ,email: 1, country: 1, phoneNumber: 1 }).sort({"_id": -1})    
+                console.log(findAllMembers)
+                res.status(200).send({status: 200, message:findAllMembers})
+            
+            }
+       }else if(type === "Inflow"){
+           
+          const inflow=  await  Trades.aggregate([
+
+            
+                
+                  
+                   { $match: { ...query, tradeStatus: "Confirmed"  } },
+                    {$group:{_id:"$userId", totalAmountInLocalCurrency: {$sum: "$amountInLocalCurrency"}}},
+                    {
+                        $lookup: {
+                        from:"profiles",
+                        localField: "userDetails",
+                        foreignField: "_id",
+                        as: "profile"
+                    
+                    }},
+                    {$project: {userId: "$_id", totalAmountInLocalCurrency:1,  profile: 1, _id:0}},
+                   
+            ])
+            console.log(inflow)
+            res.status(200).send({status: 200, message:inflow})
+       }else if(type === "Withdrawn"){
+             const withdrawn =   await Withdrawrequest.aggregate([
+                    { $match: { ...query, status: "Completed"} },
+                    {$group:{_id:"$userId", totalAmountInLocalCurrency: {$sum: "$amount"}}},
+                    {
+                        $lookup: {
+                        from:"profiles",
+                        localField: "userDetails",
+                        foreignField: "_id",
+                        as: "profile"
+                    
+                    }},
+                    {$project: {userId: "$_id", totalAmountInLocalCurrency:1,  profile: 1,  _id:0}}
+            ])
+            res.status(200).send({status: 200, message:withdrawn})
+            console.log(withdrawn)
+       }else{
+            res.status(400).send({status: 400,message:"Wrong filter type"})
+       }    
+    }catch(err){ 
+           console.log(err)
+           res.status(500).send({status: 500,message:"Error while getting admin dashboard "})
+    }
+  };
+
+
   exports.getDropletBalance = async (req, res) => {
     try{
         const headers = {
@@ -380,3 +448,16 @@ async function processEmail(emailFrom, emailTo, subject, link, link2, text, full
   
 }
   
+const getQueryNoAmount = (queryObj) =>{
+
+    let monthAgo = moment().subtract(1, 'years').format('YYYY-MM-DD');
+    console.log(monthAgo)
+    let today = moment(new Date()).format('YYYY-MM-DD');
+    console.log(today)
+    let {  from_date=monthAgo, to_date=today, status= /.*/ } = queryObj
+   
+const query = { createdAt:{ $gte: new Date(new Date(from_date).setHours(00, 00, 00)), $lte: new Date(new Date(to_date).setHours(23, 59, 59)) }}
+return query
+
+
+}
