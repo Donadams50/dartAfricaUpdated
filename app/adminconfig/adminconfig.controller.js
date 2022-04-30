@@ -7,6 +7,7 @@ const axios = require('axios');
 const moment  = require('moment')
 const sendemail = require('../helpers/emailhelper.js');
 const dotenv=require('dotenv');
+const { profile } = require("winston");
 dotenv.config();
 
 
@@ -370,27 +371,32 @@ exports.getConfiguration = async (req, res) => {
             
             }
        }else if(type === "Inflow"){
-           
           const inflow=  await  Trades.aggregate([
-
-            
-                
-                  
-                   { $match: { ...query, tradeStatus: "Confirmed"  } },
-                    {$group:{_id:"$userId", totalAmountInLocalCurrency: {$sum: "$amountInLocalCurrency"}}},
-                    {
-                        $lookup: {
-                        from:"profiles",
-                        localField: "userDetails",
-                        foreignField: "_id",
-                        as: "profile"
-                    
-                    }},
-                    {$project: {userId: "$_id", totalAmountInLocalCurrency:1,  profile: 1, _id:0}},
-                   
+                {"$match":{ ...query, tradeStatus: "Confirmed", }},
+                {"$group" : {"_id":"$userId", "totalAmountInLocalCurrency":{"$sum":"$amountInLocalCurrency"}}}, 
+                {"$lookup":{"from":"profiles","localField":"id", "foreignField":"userDetails","as":"profile"}}, 
+                {"$project": {"profiles":"$profile","total":"$totalAmountInLocalCurrency", "userId":"$_id" ,_id:0}}    
             ])
-            console.log(inflow)
-            res.status(200).send({status: 200, message:inflow})
+            var finalInflow = []
+                for(let i = 0; i < inflow.length; i++){
+                        const allProfiles = inflow[i].profiles
+                        for(let j = 0; j < allProfiles.length; j++){
+                             if( allProfiles[j]._id == inflow[i].userId){
+                                    let currentInflow = {
+                                        username: allProfiles[j].username,
+                                        walletBalance: allProfiles[j].walletBalance,
+                                        email: allProfiles[j].email,
+                                        country: allProfiles[j].country,
+                                        phoneNumber: allProfiles[j].phoneNumber,
+                                        totalAmountInLocalCurrency: inflow[i].total
+                                    }
+                                    console.log(currentInflow)
+                                    finalInflow.push(currentInflow)
+                                }
+                            }
+                        }
+
+            res.status(200).send({status: 200, message:finalInflow})
        }else if(type === "Withdrawn"){
              const withdrawn =   await Withdrawrequest.aggregate([
                     { $match: { ...query, status: "Completed"} },
@@ -398,15 +404,33 @@ exports.getConfiguration = async (req, res) => {
                     {
                         $lookup: {
                         from:"profiles",
-                        localField: "userDetails",
-                        foreignField: "_id",
+                        localField: "userId",
+                        foreignField: "userDetails",
                         as: "profile"
                     
                     }},
-                    {$project: {userId: "$_id", totalAmountInLocalCurrency:1,  profile: 1,  _id:0}}
+                    {$project: {userId: "$_id", total:"$totalAmountInLocalCurrency",  profiles:"$profile" ,_id:0}}
             ])
-            res.status(200).send({status: 200, message:withdrawn})
-            console.log(withdrawn)
+            var finalWithdrawn = []
+            for(let i = 0; i < withdrawn.length; i++){
+                    const allProfiles = withdrawn[i].profiles
+                    for(let j = 0; j < allProfiles.length; j++){
+                         if( allProfiles[j]._id == withdrawn[i].userId){
+                                let currentWithdrawn = {
+                                    username: allProfiles[j].username,
+                                    walletBalance: allProfiles[j].walletBalance,
+                                    email: allProfiles[j].email,
+                                    country: allProfiles[j].country,
+                                    phoneNumber: allProfiles[j].phoneNumber,
+                                    totalAmountInLocalCurrency: withdrawn[i].total
+                                }
+                                finalWithdrawn.push(currentWithdrawn)
+                            }
+                        }
+                    }
+
+            res.status(200).send({status: 200, message:finalWithdrawn})
+           
        }else{
             res.status(400).send({status: 400,message:"Wrong filter type"})
        }    
