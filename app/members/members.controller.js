@@ -10,6 +10,7 @@ const sendemail = require('../helpers/emailhelper.js');
 
 const { signToken } = jwtTokenUtils;
 const uuid = require('uuid')
+const speakeasy = require('speakeasy')
 const dotenv=require('dotenv');
 dotenv.config();
 
@@ -126,7 +127,8 @@ exports.createSubAdmin = async(req,res)=>{
                             verificationCode: codeGenerated,
                             isEnabled: true,
                             forgotPasswordCodeStatus: false,
-                            imageUrl: ""
+                            imageUrl: "",
+                            isAuthSecret: true
                             });
                             
                             const auths = new Auths({ 
@@ -143,6 +145,9 @@ exports.createSubAdmin = async(req,res)=>{
                                             address: process.env.user	
                                         }
                                             auths.password = await passwordUtils.hashPassword(password);
+                                           
+                                            const myAuthSecret = await generateAuthSecret()
+                                            auths.authSecret = myAuthSecret
                                             const emailFrom = from;
                                             const subject = 'Verification link';                      
                                             const hostUrl = ""+process.env.hostUrl+"/verifyemail/auth/activate/"+codeGenerated+""
@@ -160,7 +165,7 @@ exports.createSubAdmin = async(req,res)=>{
                                                     console.log(savemember)
                                                     if( savemember._id){
                                                                   
-                                                   res.status(201).send({ status:200, message:"User  created"})
+                                                   res.status(201).send({ status:200, message:"User  created", data: myAuthSecret})
                                             
                                                     }else{
                                                         res.status(400).send({ status:400,message:"Error while creating profile "})
@@ -249,7 +254,7 @@ exports.signIn = async(req, res) => {
                 if(User){
                     const retrievedPassword = Auth.password
                     const id = User._id;
-                    const {  username,    phoneNumber, email, isVerified, isEnabled, walletBalance , role, coinWallets, isSetPin, imageUrl, country, countryTag } = User
+                    const {  username,    phoneNumber, email, isVerified, isEnabled, walletBalance , role, coinWallets, isSetPin, imageUrl, country, countryTag, isAuthSecret } = User
                     const accountDetails = User.accountDetails || []
                     const isMatch = await passwordUtils.comparePassword(password, retrievedPassword);
                     console.log(isMatch )         
@@ -263,7 +268,7 @@ exports.signIn = async(req, res) => {
                             }else{
                                 const tokens = signToken( id, username, phoneNumber , email, isVerified, isEnabled, walletBalance, role, coinWallets, accountDetails, isSetPin, imageUrl,country, countryTag ) 
                                 let user = {}
-                                user.profile = { id,username, phoneNumber , email, isVerified, isEnabled, walletBalance, role, accountDetails, coinWallets, isSetPin, imageUrl,country, countryTag } 
+                                user.profile = { id,username, phoneNumber , email, isVerified, isEnabled, walletBalance, role, accountDetails, coinWallets, isSetPin, imageUrl,country, countryTag ,isAuthSecret} 
                                 user.token = tokens;                
                                 res.status(200).send({status:200,message:user})  
                             }
@@ -965,11 +970,6 @@ exports.deleteAccountDetails = async(req,res)=>{
     
 }
 
-
-
-
-
-
 // create transaction pin
 exports.createPin = async(req,res)=>{
     if (!req.body){
@@ -1350,6 +1350,85 @@ exports.deleteMember = async (req, res) => {
 
 
 
+// generate auth secret
+exports.generateAuthSecret = async(req,res)=>{ 
+            try{
+                 const email = req.user.email
+                 const isUserExist = await Members.findOne({email: email.toLowerCase()} )
+                 const isAuthExist = await Auths.findOne({email: email.toLowerCase()} )
+                         if(isUserExist && isAuthExist ){
+                            if(!isAuthExist.authSecret && !isUserExist.isAuthSecret){
+                                const authSecret = await generateAuthSecret();
+                                const _id = isAuthExist._id
+                                const updateAuthSecret = await Auths.findOneAndUpdate({ _id }, { authSecret: authSecret });
+                                if(updateAuthSecret ){
+                                    const updateProfile = await Members.updateOne({ _id: req.user.id }, { isAuthSecret: true });
+                                    res.status(201).send({ status:200, message:authSecret})
+                                }else{
+                                    res.status(400).send({status:400,message:"Error while generating auth secret"})  
+                                }
+                            }else{
+                                res.status(400).send({status:400,message:"You auth scret has been created previously"})  
+                            }
+                        }else{
+                            res.status(400).send({status:400,message:"User details not found"})  
+                        }
+            }catch(err){
+                        console.log(err)
+                        res.status(500).send(  {status: 500, message:"Error while creating pin "})
+            }
+};
+
+
+// Verify auth  code
+exports.validateAuthCode = async (req, res) => {
+    if (!req.body){
+      res.status(400).send({ status:400,message:"Content cannot be empty"});
+    }
+    const { token  } = req.body;
+    if(token){
+        if(token===""){
+            res.status(400).send({
+                status:400,
+                message:"Incorrect entry format"
+            });
+        }else{   
+            try{
+                const email = req.user.email
+                const isUserExist = await Members.findOne({email: email.toLowerCase()} )
+                const isAuthExist = await Auths.findOne({email: email.toLowerCase()} )
+                    if(isAuthExist && isUserExist){
+                        const secret = isAuthExist.authSecret.base32
+                        const tokenValidate = speakeasy.totp.verify({
+                            secret,
+                            encoding: 'base32',
+                            token, 
+                          });
+                            if(tokenValidate){
+                                res.status(200).send({ status:200, message:"Token validated succesfully ", data: true})
+                            }else{
+                                res.status(400).send({ status:400,message:"Token not valid", data: false})
+                             }                                         
+                        
+                    }else{
+                        res.status(400).send({ status:400,message:"Invalid user"})
+                    }
+                                     
+                                    
+            }catch(err){
+                console.log(err)
+                res.status(500).send({ status:500,message:"Error while verifying member "})
+            }
+        }
+    }
+    else{
+        res.status(400).send({
+            status:400,
+            message:"Incorrect entry format"
+        });
+    }
+};
+
 
 
 
@@ -1406,4 +1485,14 @@ function getCode(){
        }
     }
 return code
+}
+
+
+async function generateAuthSecret(){
+        try{
+           return speakeasy.generateSecret()
+        }catch(err){
+            console.log(err)
+            return err
+        }
 }

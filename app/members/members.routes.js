@@ -26,6 +26,8 @@ module.exports = app => {
      app.get("/walletbalance",  verifyToken, isSeller,  member.findWalletBalance)
      app.post("/link/verify/pincode" ,  member.verifyForgotpasswordlink)
      app.delete("/accountdetails/:id",  verifyToken, isSeller,   member.deleteAccountDetails)
+     app.patch("/generate/auth/secret" , verifyToken,  isAdminOrSubadmin,  member.generateAuthSecret)
+     app.patch("/verify/auth/code" , verifyToken, isAdminOrSubadmin, member.validateAuthCode)
 }
 
 

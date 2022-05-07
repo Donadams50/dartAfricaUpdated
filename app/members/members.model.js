@@ -15,7 +15,8 @@ module.exports = mongoose => {
         country: String,
         isSetPin: Boolean,
         imageUrl: String,
-        countryTag: String
+        countryTag: String,
+        isAuthSecret:Boolean
       },
 
       { timestamps: true }
