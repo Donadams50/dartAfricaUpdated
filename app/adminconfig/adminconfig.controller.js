@@ -10,12 +10,6 @@ const dotenv=require('dotenv');
 const { profile } = require("winston");
 dotenv.config();
 
-
-
-
-
-
-
 // create configuration
 exports.postConfiguration = async(req,res)=>{
         if (!req.body){
