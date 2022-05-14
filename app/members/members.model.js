@@ -16,7 +16,12 @@ module.exports = mongoose => {
         isSetPin: Boolean,
         imageUrl: String,
         countryTag: String,
-        isAuthSecret:Boolean
+        isAuthSecret:Boolean,
+        referralCode: String,
+        referredBy: String,
+        referralBonusCount: Number,
+        referralBonusAmount: Number,
+        // referralBonusUsers: [{ type : ObjectId, ref: 'profile' }],
       },
 
       { timestamps: true }

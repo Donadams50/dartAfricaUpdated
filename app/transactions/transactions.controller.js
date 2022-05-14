@@ -1,5 +1,6 @@
 const db = require("../mongoose");
 const Transactions = db.transactions;
+const Members = db.profiles;
 const mongoose = require("mongoose");
 const moment  = require('moment')
 const sendemail = require('../helpers/emailhelper.js');
@@ -75,6 +76,47 @@ exports.getTransactionsOfUserForAdmin = async (req, res) => {
          res.status(500).send({message:"Error while getting transactions "})
      }
 };
+
+
+
+exports.directCredit = async (req, res) => {
+  try{
+           const userEmail = req.body.email
+           const tradeAmount = req.body.amount
+           const tradeid = req.body.tradeId
+           const getSellersDetails = await Members.findOne({email:userEmail})
+           if(getSellersDetails){ 
+                const finalBalance =  parseFloat(getSellersDetails.walletBalance) + parseFloat(tradeAmount)
+                const transaction = new Transactions({ 
+                  amount: tradeAmount.toFixed(2),
+                  tradeId: tradeid,
+                  tradeDetails: tradeid,
+                  sellerId: getSellersDetails._id,
+                  sellerDetails: getSellersDetails._id,
+                  initialBalance: getSellersDetails.walletBalance ,
+                  finalBalance: finalBalance.toFixed(2),
+                  status : "Successful", 
+                  type: "Credit",
+                  narration: "Wallet Credited "          
+                })
+                const postTransaction = await  transaction.save()
+
+                if(postTransaction){
+                  const updateWallet= await Members.updateOne({ _id: getSellersDetails._id }, {walletBalance: finalBalance.toFixed(2)}); 
+
+                  res.status(200).send({status:200, message:"Wallet credit Successfully"})
+                }else{
+                  res.status(400).send({status:400, message:"Error while crediting wallet"})
+                } 
+          }else{
+            res.status(400).send({status:400, message:"User not found"})
+          }
+  }catch(err){
+          console.log(err)
+          res.status(500).send({status:500, message:"Error while getting transactions "})
+  }
+};
+
 
 async function processEmail(emailFrom, emailTo, subject, link, link2, text, fName){
   try{

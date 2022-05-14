@@ -21,7 +21,8 @@ exports.createSeller = async(req,res)=>{
         res.status(400).send({ status:400,message:"Content cannot be empty"});
     }
     const codeGenerated =  getCode();
-    const { username,email,password,phoneNumber,country, countryTag  } = req.body;
+    const myRefCode = generateReferralCode()
+    const { username,email,password,phoneNumber,country, countryTag, refferedBy  } = req.body;
     if (username && email && password && phoneNumber && country && countryTag ){
           if(username==="" ||  password===""  || email==="" || phoneNumber===  "" || country=== "" || countryTag === "" ){
                 res.status(400).send({
@@ -44,7 +45,9 @@ exports.createSeller = async(req,res)=>{
                             isSetPin: false,
                             imageUrl: "",
                             country: country,
-                            countryTag: countryTag
+                            countryTag: countryTag,
+                            referralCode: myRefCode,
+                            referredBy: refferedBy || ""
                             });
                             
                             const auths = new Auths({ 
@@ -147,32 +150,35 @@ exports.createSubAdmin = async(req,res)=>{
                                             auths.password = await passwordUtils.hashPassword(password);
                                            
                                             const myAuthSecret = await generateAuthSecret()
-                                            auths.authSecret = myAuthSecret
-                                            const emailFrom = from;
-                                            const subject = 'Verification link';                      
-                                            const hostUrl = ""+process.env.hostUrl+"/verifyemail/auth/activate/"+codeGenerated+""
-                                            const hostUrl2 = ""+process.env.hostUrl2+"/verifyemail/auth/activate/"+codeGenerated+"" 
-                                            const username = req.body.username
-                                            const   text = 'Welcome to Dart Africa, verify your account by clicking the link below'
-                                            const emailTo = req.body.email.toLowerCase();
-                                            const link = `${hostUrl}`;
-                                            const link2 = `${hostUrl2}`;
-                                            processEmail(emailFrom, emailTo, subject, link, link2, text, username);
-                                            const saveauth = await  auths.save()
-                                             console.log(saveauth)
-                                                if(saveauth._id){
-                                                    const savemember = await  members.save()
-                                                    console.log(savemember)
-                                                    if( savemember._id){
-                                                                  
-                                                   res.status(201).send({ status:200, message:"User  created", data: myAuthSecret})
-                                            
-                                                    }else{
-                                                        res.status(400).send({ status:400,message:"Error while creating profile "})
-                                                    }
-                                                }
-            
+                                            if(myAuthSecret.base32){  
+                                                    auths.authSecret = myAuthSecret
+                                                    const emailFrom = from;
+                                                    const subject = 'Verification link';                      
+                                                    const hostUrl = ""+process.env.hostUrl+"/verifyemail/auth/activate/"+codeGenerated+""
+                                                    const hostUrl2 = ""+process.env.hostUrl2+"/verifyemail/auth/activate/"+codeGenerated+"" 
+                                                    const username = req.body.username
+                                                    const   text = 'Welcome to Dart Africa, verify your account by clicking the link below'
+                                                    const emailTo = req.body.email.toLowerCase();
+                                                    const link = `${hostUrl}`;
+                                                    const link2 = `${hostUrl2}`;
+                                                    processEmail(emailFrom, emailTo, subject, link, link2, text, username);
+                                                    const saveauth = await  auths.save()
+                                                    console.log(saveauth)
+                                                        if(saveauth._id){
+                                                            const savemember = await  members.save()
+                                                            console.log(savemember)
+                                                            if( savemember._id){
+                                                                        
+                                                        res.status(201).send({ status:200, message:"User  created", data: myAuthSecret})
+                                                    
+                                                            }else{
+                                                                res.status(400).send({ status:400,message:"Error while creating profile "})
+                                                            }
+                                                        }
+                                            }else{
+                                                res.status(400).send(  {status: 400, message:"Error from creating auth secret"})
                                             }
+                                        }
                  
                 
                             }catch(err){
@@ -1359,13 +1365,17 @@ exports.generateAuthSecret = async(req,res)=>{
                          if(isUserExist && isAuthExist ){
                             if(!isAuthExist.authSecret && !isUserExist.isAuthSecret){
                                 const authSecret = await generateAuthSecret();
-                                const _id = isAuthExist._id
-                                const updateAuthSecret = await Auths.findOneAndUpdate({ _id }, { authSecret: authSecret });
-                                if(updateAuthSecret ){
-                                    const updateProfile = await Members.updateOne({ _id: req.user.id }, { isAuthSecret: true });
-                                    res.status(201).send({ status:200, message:authSecret})
+                                if(authSecret.base32){  
+                                    const _id = isAuthExist._id
+                                    const updateAuthSecret = await Auths.findOneAndUpdate({ _id }, { authSecret: authSecret });
+                                    if(updateAuthSecret ){
+                                        const updateProfile = await Members.updateOne({ _id: req.user.id }, { isAuthSecret: true });
+                                        res.status(201).send({ status:200, message:authSecret})
+                                    }else{
+                                        res.status(400).send({status:400,message:"Error while generating auth secret"})  
+                                    }
                                 }else{
-                                    res.status(400).send({status:400,message:"Error while generating auth secret"})  
+                                         res.status(400).send({status:400,message:"Error while generating auth secret"})  
                                 }
                             }else{
                                 res.status(400).send({status:400,message:"You auth scret has been created previously"})  
@@ -1429,7 +1439,28 @@ exports.validateAuthCode = async (req, res) => {
     }
 };
 
-
+// generate referral code
+exports.generateRefarralCode = async(req,res)=>{ 
+    try{
+         const email = req.user.email
+         const isUserExist = await Members.findOne({email: email.toLowerCase()} )
+         const isAuthExist = await Auths.findOne({email: email.toLowerCase()} )
+                 if(isUserExist && isAuthExist ){
+                    if(!isUserExist.referralCode){
+                        const referralCode = await generateReferralCode();
+                        await Members.updateOne({ _id: req.user.id }, { isAuthSecret: true });
+                        res.status(200).send({ status:200, message:referralCode})
+                    }else{
+                        res.status(400).send({status:400,message:"You referrral code has been created previously"})  
+                    }
+                }else{
+                    res.status(400).send({status:400,message:"User details not found"})  
+                }
+    }catch(err){
+                console.log(err)
+                res.status(500).send(  {status: 500, message:"Error while creating referral code "})
+    }
+};
 
 
 // process email one
@@ -1485,6 +1516,25 @@ function getCode(){
        }
     }
 return code
+}
+
+function generateReferralCode(){
+     try{
+          const rawCode = getCode()
+          const referralCode = `Dart${rawCode}`
+          console.log(referralCode)
+          const isCodeExist = await Members.findOne({referralCode: referralCode})
+          if(isCodeExist){ 
+            console.log("i am duplicate")
+            generateReferralCode()
+          }else{
+            return referralCode
+          }
+         
+     }catch(err){
+        console.log(err)
+        return err
+     }
 }
 
 
