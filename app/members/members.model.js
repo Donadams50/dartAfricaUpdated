@@ -1,4 +1,5 @@
 module.exports = mongoose => {
+  var Schema = mongoose.Schema;
     var schema = mongoose.Schema(
       {
         username: String,
@@ -18,10 +19,10 @@ module.exports = mongoose => {
         countryTag: String,
         isAuthSecret:Boolean,
         referralCode: String,
-        referredBy: String,
+        referredBy:  { type: Schema.Types.ObjectId, ref: 'profile' },
         referralBonusCount: Number,
         referralBonusAmount: Number,
-        // referralBonusUsers: [{ type : ObjectId, ref: 'profile' }],
+        referralBonusUsers: [{ type : Schema.Types.ObjectId, ref: 'profile' }],
       },
 
       { timestamps: true }

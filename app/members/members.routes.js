@@ -29,6 +29,8 @@ module.exports = app => {
      app.patch("/generate/auth/secret", verifyToken,  isAdminOrSubadmin,  member.generateAuthSecret)
      app.patch("/verify/auth/code", verifyToken, isAdminOrSubadmin, member.validateAuthCode)
      app.patch("/generate/refarral/code", verifyToken,  isSeller,  member.generateRefarralCode)
+     app.patch("/refarral/code/existing/users", verifyToken,  isAdmin,  member.generateRefarralCodeForExistingMembers)
+     app.patch("/bonus/existing/users", verifyToken,  isAdmin,  member.generateRefarralBonusExistingMembers)
 }
 
 

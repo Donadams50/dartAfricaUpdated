@@ -21,8 +21,9 @@ exports.createSeller = async(req,res)=>{
         res.status(400).send({ status:400,message:"Content cannot be empty"});
     }
     const codeGenerated =  getCode();
-    const myRefCode = generateReferralCode()
+    const myRefCode = await  generateReferralCode()
     const { username,email,password,phoneNumber,country, countryTag, refferedBy  } = req.body;
+   
     if (username && email && password && phoneNumber && country && countryTag ){
           if(username==="" ||  password===""  || email==="" || phoneNumber===  "" || country=== "" || countryTag === "" ){
                 res.status(400).send({
@@ -30,26 +31,55 @@ exports.createSeller = async(req,res)=>{
                     message:"Incorrect entry format"
                 });
           }else{ 
-                const members = new Members({
-                            username: username,
-                            role: "Seller",
-                            phoneNumber: phoneNumber,
-                            email: email.toLowerCase(),
-                            forgotPasswordCode: '',
-                            isVerified: false,
-                            walletBalance: 0.00,
-                            verificationCode: codeGenerated,
-                            isEnabled: true,
-                            forgotPasswordCodeStatus: false,
-                            accountDetails : [],
-                            isSetPin: false,
-                            imageUrl: "",
-                            country: country,
-                            countryTag: countryTag,
-                            referralCode: myRefCode,
-                            referredBy: refferedBy || ""
-                            });
-                            
+
+            if(refferedBy){
+                var isCodeExist = await Members.findOne({referralCode: refferedBy})
+                 if(!isCodeExist) return res.status(400).send({status:400,message:"Refferral code not valid"})
+                 var  members = new Members({
+                    username: username,
+                    role: "Seller",
+                    phoneNumber: phoneNumber,
+                    email: email.toLowerCase(),
+                    forgotPasswordCode: '',
+                    isVerified: false,
+                    walletBalance: 0.00,
+                    verificationCode: codeGenerated,
+                    isEnabled: true,
+                    forgotPasswordCodeStatus: false,
+                    accountDetails : [],
+                    isSetPin: false,
+                    imageUrl: "",
+                    country: country,
+                    countryTag: countryTag,
+                    referralCode: myRefCode,
+                    referredBy: isCodeExist.id ,
+                    referralBonusCount: 0,
+                    referralBonusAmount: 0,
+                    referralBonusUsers: []
+                    });
+             }else{
+                var  members = new Members({
+                    username: username,
+                    role: "Seller",
+                    phoneNumber: phoneNumber,
+                    email: email.toLowerCase(),
+                    forgotPasswordCode: '',
+                    isVerified: false,
+                    walletBalance: 0.00,
+                    verificationCode: codeGenerated,
+                    isEnabled: true,
+                    forgotPasswordCodeStatus: false,
+                    accountDetails : [],
+                    isSetPin: false,
+                    imageUrl: "",
+                    country: country,
+                    countryTag: countryTag,
+                    referralCode: myRefCode,
+                    referralBonusCount: 0,
+                    referralBonusAmount: 0,
+                    referralBonusUsers: []
+                    });
+             }
                             const auths = new Auths({ 
                                 email: req.body.email.toLowerCase(),
                                 pin: ""           
@@ -260,7 +290,7 @@ exports.signIn = async(req, res) => {
                 if(User){
                     const retrievedPassword = Auth.password
                     const id = User._id;
-                    const {  username,    phoneNumber, email, isVerified, isEnabled, walletBalance , role, coinWallets, isSetPin, imageUrl, country, countryTag, isAuthSecret } = User
+                    const {  username,    phoneNumber, email, isVerified, isEnabled, walletBalance , role, coinWallets, isSetPin, imageUrl, country, countryTag, isAuthSecret,referralCode,referralBonusCount,referralBonusAmount } = User
                     const accountDetails = User.accountDetails || []
                     const isMatch = await passwordUtils.comparePassword(password, retrievedPassword);
                     console.log(isMatch )         
@@ -274,7 +304,7 @@ exports.signIn = async(req, res) => {
                             }else{
                                 const tokens = signToken( id, username, phoneNumber , email, isVerified, isEnabled, walletBalance, role, coinWallets, accountDetails, isSetPin, imageUrl,country, countryTag ) 
                                 let user = {}
-                                user.profile = { id,username, phoneNumber , email, isVerified, isEnabled, walletBalance, role, accountDetails, coinWallets, isSetPin, imageUrl,country, countryTag ,isAuthSecret} 
+                                user.profile = { id,username, phoneNumber , email, isVerified, isEnabled, walletBalance, role, accountDetails, coinWallets, isSetPin, imageUrl,country, countryTag ,isAuthSecret,referralCode,referralBonusCount,referralBonusAmount} 
                                 user.token = tokens;                
                                 res.status(200).send({status:200,message:user})  
                             }
@@ -1518,10 +1548,11 @@ function getCode(){
 return code
 }
 
-function generateReferralCode(){
+async function generateReferralCode(){
      try{
           const rawCode = getCode()
           const referralCode = `Dart${rawCode}`
+          console.log("referralCode")
           console.log(referralCode)
           const isCodeExist = await Members.findOne({referralCode: referralCode})
           if(isCodeExist){ 
@@ -1546,3 +1577,42 @@ async function generateAuthSecret(){
             return err
         }
 }
+
+
+
+    exports.generateRefarralCodeForExistingMembers = async(req,res)=>{ 
+        const findAllMembers = await Members.find({role: "Seller"})
+        console.log("findAllMembers.length")
+        console.log(findAllMembers.length)
+            try{
+                for( var i = 0; i < findAllMembers.length; i++){
+                       userId = findAllMembers[i]._id
+                      const myRefCode = await  generateReferralCode()
+                      const updateProfile = await Members.updateOne({ _id: userId }, { referralCode: myRefCode });
+                      console.log("success")
+                  }                 
+                   res.status(201).send({ status: 201, message:"saved successfully "})
+            }catch(err){
+                console.log(err)
+                return res.status(500).send({ status: 500, message:"Error while saving "})
+            }       
+};
+
+exports.generateRefarralBonusExistingMembers = async(req,res)=>{ 
+    const findAllMembers = await Members.find({role: "Seller"})
+    console.log("findAllMembers.length")
+    console.log(findAllMembers.length)
+        try{
+            for( var i = 0; i < findAllMembers.length; i++){
+                   userId = findAllMembers[i]._id
+                  const updateBonusCount = await Members.updateOne({ _id: userId }, { referralBonusCount: 0 });
+                  const updateBonusAmount = await Members.updateOne({ _id: userId }, { referralBonusAmount: 0 });
+                  const updateBonusUsers = await Members.updateOne({ _id: userId }, { referralBonusUsers: []});
+                  console.log("success")
+              }                 
+               res.status(201).send({ status: 201, message:"saved successfully "})
+        }catch(err){
+            console.log(err)
+            return res.status(500).send({ status: 500, message:"Error while saving "})
+        }       
+};
