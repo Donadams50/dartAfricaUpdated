@@ -713,7 +713,7 @@ exports.getBanksCode = async (req, res) => {
             if(getAllCode.status === 200){
 
                 if(country === "GH"){
-                    var indexesToBeRemoved = [0, 1, 2,];
+                    var indexesToBeRemoved = [0, 1, 2];
               
                     allBanks = allCode.filter(function(value, index) {
                            return indexesToBeRemoved.indexOf(index) == -1;

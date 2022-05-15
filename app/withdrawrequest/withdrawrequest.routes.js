@@ -12,7 +12,7 @@ module.exports = app => {
    app.post("/completerequest/flutter/:withdrawerrequestId",  verifyToken, isAdminOrSubadmin,  withdrawerrequest.flutterwaveWithdrawer)
    app.get("/withdrawer/request/:withdrawerrequestId",  verifyToken, isAdminOrSubadmin,  withdrawerrequest.getWithdrawerRequestById)
    app.get("/banks/code/:country",  verifyToken, isSeller,  withdrawerrequest.getBanksCode)
-   app.get("/mobilewallet/code",   withdrawerrequest.getMobileWalletCode)
+   app.get("/mobilewallet/code",  verifyToken, isSeller,  withdrawerrequest.getMobileWalletCode)
    app.get("/bank/branch/:codeId",  verifyToken, isSeller,  withdrawerrequest.getBankBranch)
    app.post("/flutter/webhook/payment/status/:refence",  withdrawerrequest.updateFlutterResponse)
    app.post("/bank/accountname",   withdrawerrequest.getAccountName)
