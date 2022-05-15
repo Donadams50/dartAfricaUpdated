@@ -782,7 +782,7 @@ exports.ChangePassword = async(req,res)=>{
 exports.findMembeById = async (req, res) => {
     try{
         let id = req.params.id
-        const findMemberById = await Members.findOne({_id: id})
+        const findMemberById = await Members.findOne({_id: id}).populate('referredBy').populate('referralBonusUsers')
         res.status(200).send({ status: 200, message :findMemberById})         
     }catch(err){
         console.log(err)
@@ -955,7 +955,7 @@ exports.findAllMembers = async (req, res) => {
                     res.status(400).send({ status: 400, message:"You can get admin users "})
                 }else{
                     if(limit){
-                        const findAllMembers = await Members.find({role: role}).sort({"_id": -1}).limit(limit)
+                        const findAllMembers = await Members.find({role: role}).sort({"_id": -1}).limit(limit).populate('referredBy').populate('referralBonusUsers')
                     console.log(findAllMembers)
                     res.status(200).send( {status: 200, message: findAllMembers})
                     }else{
@@ -1478,8 +1478,8 @@ exports.generateRefarralCode = async(req,res)=>{
                  if(isUserExist && isAuthExist ){
                     if(!isUserExist.referralCode){
                         const referralCode = await generateReferralCode();
-                        await Members.updateOne({ _id: req.user.id }, { isAuthSecret: true });
-                        res.status(200).send({ status:200, message:referralCode})
+                        await Members.updateOne({ _id: req.user.id }, { referralCode: referralCode });
+                        res.status(200).send({ status:200, message:{referralCode: referralCode}})
                     }else{
                         res.status(400).send({status:400,message:"You referrral code has been created previously"})  
                     }
@@ -1580,7 +1580,7 @@ async function generateAuthSecret(){
 
 
 
-    exports.generateRefarralCodeForExistingMembers = async(req,res)=>{ 
+exports.generateRefarralCodeForExistingMembers = async(req,res)=>{ 
         const findAllMembers = await Members.find({role: "Seller"})
         console.log("findAllMembers.length")
         console.log(findAllMembers.length)

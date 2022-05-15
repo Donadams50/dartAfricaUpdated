@@ -713,7 +713,7 @@ exports.getBanksCode = async (req, res) => {
             if(getAllCode.status === 200){
 
                 if(country === "GH"){
-                    var indexesToBeRemoved = [0, 1, 2, 3];
+                    var indexesToBeRemoved = [0, 1, 2,];
               
                     allBanks = allCode.filter(function(value, index) {
                            return indexesToBeRemoved.indexOf(index) == -1;
@@ -747,8 +747,6 @@ exports.getBankBranch = async (req, res) => {
             //console.log(getBranchCodes.data.data)
             let branchCode = getBranchCodes.data.data
             if(getBranchCodes.status === 200){
-                
-              
                 res.status(200).send({ status: 200, message: branchCode})
             }else{
                 res.status(400).send({ status: 400, message: "error while calling flutter wave"})
@@ -776,7 +774,7 @@ exports.getMobileWalletCode = async (req, res) => {
             if(getAllCode.status === 200){
                  
                  const mobileWalletCode = function( arr){
-                     return[arr[0], arr[1], arr[2], arr[3]]
+                     return[arr[0], arr[1], arr[2]]
                  }
                  res.status(200).send({ status: 200, message: mobileWalletCode(allCode)})
             }else{
@@ -1091,6 +1089,8 @@ const makePaymentNigeria = async (account_bank , account_number  , amount, narra
       return err
     }
   }
+
+
  const makePaymentMobile = async (account_bank , account_number  , amount, narration , currency, reference, accountName) => {
     try {
      // const referenceNumber =
@@ -1154,9 +1154,7 @@ return query
 
 }
 
-  
-          
-//get wallet code
+
 
 exports.getAccountName = async (req, res) => {
     const {account_bank, account_number} = req.body;

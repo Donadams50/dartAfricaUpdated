@@ -225,8 +225,6 @@ exports.responseCoinbaseCreateTrade = async(req, res) => {
      console.log(event.data)
      console.log(event.type)
     try{
-        // const sess = await mongoose.startSession()
-        // sess.startTransaction()
         getTrade = await Trades.findOne({uniqueId: event.data.id})
         console.log("trade details")
         console.log(getTrade)
@@ -261,6 +259,7 @@ exports.responseCoinbaseCreateTrade = async(req, res) => {
                       }else{
                           var rateInLocalCurrency = rateInLocalCurrencyObject.cedisRateUsd
                       }
+
                   }else if(getTrade.country === "NG"){
                       rateInLocalCurrencyObject =  rate.localCurrencyRate.find(x =>  tradeAmountInUsd >= x.minimumUsdValue  && tradeAmountInUsd <= x.maximumUsdValue)
                       if( typeof rateInLocalCurrencyObject === 'undefined'){
@@ -290,9 +289,12 @@ exports.responseCoinbaseCreateTrade = async(req, res) => {
 
                    if(postTransaction){
                           
-                         const updateTradeCedis= await Trades.updateOne({ _id : _id }, { coinType: coinBaseCurrency, amounttInCoin: coinBaseAmount, amountInLocalCurrency: tradeAmount.toFixed(2), amountInUSD: tradeAmountInUsd.toFixed(2) }); 
+                         const updateTrade= await Trades.updateOne({ _id : _id }, { coinType: coinBaseCurrency, amounttInCoin: coinBaseAmount, amountInLocalCurrency: tradeAmount.toFixed(2), amountInUSD: tradeAmountInUsd.toFixed(2) }); 
                          const updateWallet= await Members.updateOne({ _id: getSellersDetails._id }, {walletBalance: finalBalance.toFixed(2)}); 
-                            from = {
+                         fundReferredByWallet(getSellersDetails)
+                       
+                  
+                         from = {
                               name: process.env.emailName,
                               address: process.env.user	
                           }
@@ -374,8 +376,8 @@ exports.resolveTrade = async(req, res) => {
             params= {
 
             }
-            const sess = await mongoose.startSession()
-            sess.startTransaction()
+            // const sess = await mongoose.startSession()
+            // sess.startTransaction()
                 const headers = {
                   'Content-Type': 'application/json',
                   'X-CC-Api-Key':  process.env.COINBASE_API_KEY,
@@ -395,14 +397,30 @@ exports.resolveTrade = async(req, res) => {
                                           coinBaseAmount = resolvetrade.data.data.payments[0].value.crypto.amount
                                           coinBaseCurrency = resolvetrade.data.data.payments[0].value.crypto.currency
                                            const _id = tradeId
-                                          const updateTradeStatus = await Trades.findOneAndUpdate({ _id }, { tradeStatus: "Confirmed" },  { session: sess });    
+                                          const updateTradeStatus = await Trades.findOneAndUpdate({ _id }, { tradeStatus: "Confirmed" });    
                                           getSellersDetails = await Members.findOne({_id:getTrade.userId}, )
                                           rate = await Ratecalculator.findOne({coinType: coinBaseCurrency})
+                                        
+
                                           if(getTrade.country === "GH"){
-                                            var rateInLocalCurrency = rate.cedisRateUsd
-                                          }else if(getTrade.country === "NG"){
-                                            var rateInLocalCurrency = rate.ngnRateUsd
-                                          }
+                                            rateInLocalCurrencyObject =  rate.localCurrencyRate.find(x =>  tradeAmountInUsd >= x.minimumUsdValue  && tradeAmountInUsd <= x.maximumUsdValue)
+                                            if( typeof rateInLocalCurrencyObject === 'undefined'){
+                                                console.log(localCurrencyRate[localCurrencyRate.length - 1])
+                                                var rateInLocalCurrency = localCurrencyRate[localCurrencyRate.length - 1].cedisRateUsd
+                                            }else{
+                                                var rateInLocalCurrency = rateInLocalCurrencyObject.cedisRateUsd
+                                            }
+                      
+                                        }else if(getTrade.country === "NG"){
+                                            rateInLocalCurrencyObject =  rate.localCurrencyRate.find(x =>  tradeAmountInUsd >= x.minimumUsdValue  && tradeAmountInUsd <= x.maximumUsdValue)
+                                            if( typeof rateInLocalCurrencyObject === 'undefined'){
+                                                console.log(localCurrencyRate[localCurrencyRate.length - 1])
+                                                var rateInLocalCurrency = localCurrencyRate[localCurrencyRate.length - 1].ngnRateUsd
+                                            }else{
+                                                console.log(x)
+                                                var rateInLocalCurrency = rateInLocalCurrencyObject.ngnRateUsd
+                                            }
+                                        }
                                           tradeAmount = parseFloat(coinBaseAmount) * parseFloat(rate.usdRateCoin) * parseFloat(rateInLocalCurrency)
                                           tradeAmountInUsd  = parseFloat(coinBaseAmount) * parseFloat(rate.usdRateCoin) 
                                           const finalBalance =  parseFloat(getSellersDetails.walletBalance) + parseFloat(tradeAmount)
@@ -418,13 +436,14 @@ exports.resolveTrade = async(req, res) => {
                                             type: "Credit",
                                             narration: "Trade resolved"       
                                           })
-                                          const postTransaction = await  transaction.save({ session: sess })
+                                          const postTransaction = await  transaction.save()
 
                                             if(postTransaction){
                                                   
-                                                  const updateTradeCedis= await Trades.updateOne({ _id : _id }, { coinType: coinBaseCurrency, amounttInCoin: coinBaseAmount, amountInLocalCurrency: tradeAmount.toFixed(2), amountInUSD: tradeAmountInUsd.toFixed(2) },  { session: sess }); 
-                                                  const updateWallet= await Members.updateOne({ _id: getSellersDetails._id }, {walletBalance: finalBalance.toFixed(2)},  { session: sess }); 
-                                                    from = {
+                                                  const updateTradeCedis= await Trades.updateOne({ _id : _id }, { coinType: coinBaseCurrency, amounttInCoin: coinBaseAmount, amountInLocalCurrency: tradeAmount.toFixed(2), amountInUSD: tradeAmountInUsd.toFixed(2) }); 
+                                                  const updateWallet= await Members.updateOne({ _id: getSellersDetails._id }, {walletBalance: finalBalance.toFixed(2)}); 
+                                                  fundReferredByWallet(getSellersDetails)  
+                                                  from = {
                                                       name: process.env.emailName,
                                                       address: process.env.user	
                                                   }
@@ -451,8 +470,7 @@ exports.resolveTrade = async(req, res) => {
                     res.status(400).send({ status:400, message:"This trade is not in an Unresolved state, there by cannot be resolved"})
                 }
 
-                await sess.commitTransaction()
-                sess.endSession();
+              
           }catch(err){
               console.log(err)
               res.status(500).send({ status:500, message:"Error while creating trade "})
@@ -522,12 +540,6 @@ const getQueryNoAmount = (queryObj) =>{
 
 
 
-
-
-
-
-
-
 // get trade by a user
 exports.getTradeForAdmin = async (req, res) => {
   try{
@@ -582,8 +594,7 @@ exports.declineTrade = async(req, res) => {
   
               const _id = req.params.tradeId;
              
-              const sess = await mongoose.startSession()
-              sess.startTransaction()
+              
             getTrade = await Trades.findOne({_id: _id})
             //console.log(getTrade)
            if(getTrade.tradeStatus === "Pending"  &&  (getTrade.paymentStatus === "Not Initiated" || getTrade.paymentStatus === "Failed")){
@@ -595,7 +606,7 @@ exports.declineTrade = async(req, res) => {
 
             getExchangerDetails = await Members.findOne({_id:getTrade.userId}, )
 
-             const postIsComplete = await Trades.findOneAndUpdate({ _id }, { tradeStatus: "Declined" },  { session: sess });  
+             const postIsComplete = await Trades.findOneAndUpdate({ _id }, { tradeStatus: "Declined" });  
 
              
                 notify = new Notifications({      
@@ -606,9 +617,8 @@ exports.declineTrade = async(req, res) => {
                     message : "Your giftcard has been rejected"                                              
                   })
            
-            const postNotification = await  notify.save({ session: sess })
-             await sess.commitTransaction()
-             sess.endSession();
+            const postNotification = await  notify.save()
+            
              from = {
               name: process.env.emailName,
               address: process.env.user	
@@ -778,33 +788,68 @@ async function processEmail(emailFrom, emailTo, subject, link, link2, text, full
    
   }  
 
-const makePayment = async (account_bank , account_number  , amount, narration , currency, debit_currency, reference) => {
+const fundReferredByWallet = async (sellerDetails) => {
     try {
-     // const referenceNumber =
-      console.log("make payment")
-      const headers = {
-          'Authorization': process.env.flutterToken,
-          'Content-Type': 'application/json'      
-          }
-          const params = {
+      const findTrade = await Trades.find({userId : sellerDetails._id, tradeStatus: "Confirmed"})
+      if(sellerDetails.country === "GH"){
+        if(sellerDetails.referredBy && sellerDetails.referralBonusCount < process.env.totalRedeemableBonusCountGH && sellerDetails.referralBonusAmount < process.env.totalRedeemableBonusAmountGH && findTrade.length === 0 ){
+          getReferredByDetails  =   await Members.findOne({_id:sellerDetails.referredBy})
+          const initialBalance = parseFloat(getReferredByDetails.walletBalance)
+          const amount=  parseFloat(process.env.referralBonusGH)
+          const finalBalance =  initialBalance + amount
+          const referralBonusCount = parseFloat(getReferredByDetails.referralBonusCount) + 1
+          const referralBonusAmount=  parseFloat(getReferredByDetails.referralBonusAmount) + amount
+          transaction = new Transactions({ 
+            amount: amount.toFixed(2),
+            sellerId: sellerDetails._id,
+            sellerDetails: sellerDetails._id,
+            initialBalance: initialBalance,
+            finalBalance: finalBalance.toFixed(2),
+            status : "Successful", 
+            type: "Credit",
+            narration: "Referral Bonus"         
+          })
+          const postTransaction = await  transaction.save()
+          const updateRefferedBy= await Members.updateOne({ _id: getReferredByDetails._id }, {walletBalance: finalBalance.toFixed(2),referralBonusCount: referralBonusCount,referralBonusAmount: referralBonusAmount}); 
+          Members.update(
+            { _id: getReferredByDetails._id }, 
+            { $push: { referralBonusUsers: sellerDetails._id} },
+            done
+           );
+        }
+        console.log("i gave referral money gh" )
+   }else if(sellerDetails.country === "NG"){
+        if(getSellersDetails.referredBy && getSellersDetails.referralBonusCount < process.env.totalRedeemableBonusCountNG && getSellersDetails.referralBonusAmount < process.env.totalRedeemableBonusAmountNG  && findTrade.length === 0){
+          getReferredByDetails  =   await Members.findOne({_id:sellerDetails.referredBy})
+          const initialBalance = parseFloat(getReferredByDetails.walletBalance)
+          const amount=  parseFloat(process.env.referralBonusNG)
+          const finalBalance =  initialBalance + amount
+          const referralBonusCount = parseFloat(getReferredByDetails.referralBonusCount) + 1
+          const referralBonusAmount=  parseFloat(getReferredByDetails.referralBonusAmount) + amount
+          transaction = new Transactions({ 
+            amount: amount.toFixed(2),
+            sellerId: sellerDetails._id,
+            sellerDetails: sellerDetails._id,
+            initialBalance: initialBalance,
+            finalBalance: finalBalance.toFixed(2),
+            status : "Successful", 
+            type: "Credit",
+            narration: "Referral Bonus"         
+          })
+          const postTransaction = await  transaction.save()
+          const updateRefferedBy= await Members.updateOne({ _id: getReferredByDetails._id }, {walletBalance: finalBalance.toFixed(2),referralBonusCount: referralBonusCount,referralBonusAmount: referralBonusAmount}); 
+          Members.update(
+            { _id: getReferredByDetails._id }, 
+            { $push: { referralBonusUsers: sellerDetails._id} },
+            done
+           );
 
-            account_bank: account_bank,
-            account_number: account_number,
-            amount: amount,
-            narration: narration,
-            currency: currency,
-            debit_currency: debit_currency,
-            reference : reference,
-            callback_url : `https://tacit-exchanger.herokuapp.com/webhook/payment/status/${reference}`
-          
-          }
-      
-      const  sendmoney = await axios.post('https://api.flutterwave.com/v3/transfers', params, {headers: headers}) 
-          console.log(sendmoney.data)
+        }
+        console.log("i gave referral money ng" )
+   }
         
-  
-      return sendmoney
-    } catch (err) { 
+   console.log("i no give referral money at all" )
+  } catch (err) { 
       console.log(err)
       return err
     }
@@ -848,8 +893,7 @@ const makePayment = async (account_bank , account_number  , amount, narration , 
     console.log(req.body)
     const {  reference, status, coin, amountPaid} = req.body;
     try{
-        // const sess = await mongoose.startSession()
-        // sess.startTransaction()
+      
         getTrade = await Trades.findOne({uniqueId: reference})
         console.log("trade details")
         console.log(getTrade)
@@ -905,7 +949,9 @@ const makePayment = async (account_bank , account_number  , amount, narration , 
                           
                          const updateTradeCedis= await Trades.updateOne({ _id : _id }, { coinType: lazerpayCurrency, amounttInCoin: lazerpayAmount, amountInLocalCurrency: tradeAmount.toFixed(2), amountInUSD: tradeAmountInUsd.toFixed(2) }); 
                          const updateWallet= await Members.updateOne({ _id: getSellersDetails._id }, {walletBalance: finalBalance.toFixed(2)}); 
-                            from = {
+                         fundReferredByWallet(getSellersDetails)   
+                         
+                         from = {
                               name: process.env.emailName,
                               address: process.env.user	
                           }
@@ -942,8 +988,6 @@ const makePayment = async (account_bank , account_number  , amount, narration , 
               console.log("This trade has been completed or Invalid")
               res.status(200).send()
         } 
-        //await sess.commitTransaction()
-        //sess.endSession();
     }catch(err){
         console.log(err)
         res.status(500).send({message:"Error while completing trade "})
