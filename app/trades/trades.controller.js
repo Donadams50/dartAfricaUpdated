@@ -537,9 +537,6 @@ const getQueryNoAmount = (queryObj) =>{
  }
 
 
-
-
-
 // get trade by a user
 exports.getTradeForAdmin = async (req, res) => {
   try{
@@ -789,10 +786,12 @@ async function processEmail(emailFrom, emailTo, subject, link, link2, text, full
   }  
 
 const fundReferredByWallet = async (sellerDetails) => {
+  console.log("i enter find reffered by")
     try {
       const findTrade = await Trades.find({userId : sellerDetails._id, tradeStatus: "Confirmed"})
-      if(sellerDetails.country === "GH"){
-        if(sellerDetails.referredBy && sellerDetails.referralBonusCount < process.env.totalRedeemableBonusCountGH && sellerDetails.referralBonusAmount < process.env.totalRedeemableBonusAmountGH && findTrade.length === 0 ){
+      console.log(findTrade.length)
+      if(sellerDetails.countryTag === "GH"){
+        if(sellerDetails.referredBy && sellerDetails.referralBonusCount < process.env.totalRedeemableBonusCountGH && sellerDetails.referralBonusAmount < process.env.totalRedeemableBonusAmountGH && findTrade.length === 1 ){
           getReferredByDetails  =   await Members.findOne({_id:sellerDetails.referredBy})
           const initialBalance = parseFloat(getReferredByDetails.walletBalance)
           const amount=  parseFloat(process.env.referralBonusGH)
@@ -801,8 +800,8 @@ const fundReferredByWallet = async (sellerDetails) => {
           const referralBonusAmount=  parseFloat(getReferredByDetails.referralBonusAmount) + amount
           transaction = new Transactions({ 
             amount: amount.toFixed(2),
-            sellerId: sellerDetails._id,
-            sellerDetails: sellerDetails._id,
+            sellerId: getReferredByDetails._id,
+            sellerDetails: getReferredByDetails._id,
             initialBalance: initialBalance,
             finalBalance: finalBalance.toFixed(2),
             status : "Successful", 
@@ -811,15 +810,14 @@ const fundReferredByWallet = async (sellerDetails) => {
           })
           const postTransaction = await  transaction.save()
           const updateRefferedBy= await Members.updateOne({ _id: getReferredByDetails._id }, {walletBalance: finalBalance.toFixed(2),referralBonusCount: referralBonusCount,referralBonusAmount: referralBonusAmount}); 
-          Members.update(
+          await Members.updateOne(
             { _id: getReferredByDetails._id }, 
-            { $push: { referralBonusUsers: sellerDetails._id} },
-            done
-           );
+            { $addToSet: {"referralBonusUsers" : sellerDetails._id } }
+         )
         }
         console.log("i gave referral money gh" )
-   }else if(sellerDetails.country === "NG"){
-        if(getSellersDetails.referredBy && getSellersDetails.referralBonusCount < process.env.totalRedeemableBonusCountNG && getSellersDetails.referralBonusAmount < process.env.totalRedeemableBonusAmountNG  && findTrade.length === 0){
+   }else if(sellerDetails.countryTag === "NG"){
+        if(getSellersDetails.referredBy && getSellersDetails.referralBonusCount < process.env.totalRedeemableBonusCountNG && getSellersDetails.referralBonusAmount < process.env.totalRedeemableBonusAmountNG  && findTrade.length === 1){
           getReferredByDetails  =   await Members.findOne({_id:sellerDetails.referredBy})
           const initialBalance = parseFloat(getReferredByDetails.walletBalance)
           const amount=  parseFloat(process.env.referralBonusNG)
@@ -828,8 +826,8 @@ const fundReferredByWallet = async (sellerDetails) => {
           const referralBonusAmount=  parseFloat(getReferredByDetails.referralBonusAmount) + amount
           transaction = new Transactions({ 
             amount: amount.toFixed(2),
-            sellerId: sellerDetails._id,
-            sellerDetails: sellerDetails._id,
+            sellerId: getReferredByDetails._id,
+            sellerDetails: getReferredByDetails._id,
             initialBalance: initialBalance,
             finalBalance: finalBalance.toFixed(2),
             status : "Successful", 
@@ -838,11 +836,10 @@ const fundReferredByWallet = async (sellerDetails) => {
           })
           const postTransaction = await  transaction.save()
           const updateRefferedBy= await Members.updateOne({ _id: getReferredByDetails._id }, {walletBalance: finalBalance.toFixed(2),referralBonusCount: referralBonusCount,referralBonusAmount: referralBonusAmount}); 
-          Members.update(
+           await Members.updateOne(
             { _id: getReferredByDetails._id }, 
-            { $push: { referralBonusUsers: sellerDetails._id} },
-            done
-           );
+            { $addToSet: { "referralBonusUsers": sellerDetails._id } }
+         )
 
         }
         console.log("i gave referral money ng" )
@@ -889,7 +886,8 @@ const fundReferredByWallet = async (sellerDetails) => {
   };
 
 
-  exports.responseLazerpayCreateTrade = async(req, res) => {
+exports.responseLazerpayCreateTrade = async(req, res) => {
+  
     console.log(req.body)
     const {  reference, status, coin, amountPaid} = req.body;
     try{
@@ -913,18 +911,18 @@ const fundReferredByWallet = async (sellerDetails) => {
                   if(getTrade.country === "GH"){
                       rateInLocalCurrencyObject =  rate.localCurrencyRate.find(x =>  tradeAmountInUsd >= x.minimumUsdValue  && tradeAmountInUsd <= x.maximumUsdValue)
                       if( typeof rateInLocalCurrencyObject === 'undefined'){
-                          console.log(localCurrencyRate[localCurrencyRate.length - 1])
-                          var rateInLocalCurrency = localCurrencyRate[localCurrencyRate.length - 1].cedisRateUsd
+                          console.log(rate.localCurrencyRate[rate.localCurrencyRate.length - 1])
+                          var rateInLocalCurrency = rate.localCurrencyRate[rate.localCurrencyRate.length - 1].cedisRateUsd
                       }else{
                           var rateInLocalCurrency = rateInLocalCurrencyObject.cedisRateUsd
                       }
                   }else if(getTrade.country === "NG"){
                       rateInLocalCurrencyObject =  rate.localCurrencyRate.find(x =>  tradeAmountInUsd >= x.minimumUsdValue  && tradeAmountInUsd <= x.maximumUsdValue)
                       if( typeof rateInLocalCurrencyObject === 'undefined'){
-                          console.log(localCurrencyRate[localCurrencyRate.length - 1])
-                          var rateInLocalCurrency = localCurrencyRate[localCurrencyRate.length - 1].ngnRateUsd
+                          console.log(rate.localCurrencyRate[rate.localCurrencyRate.length - 1])
+                          var rateInLocalCurrency = rate.localCurrencyRate[rate.localCurrencyRate.length - 1].ngnRateUsd
                       }else{
-                          console.log(x)
+                         // console.log(x)
                           var rateInLocalCurrency = rateInLocalCurrencyObject.ngnRateUsd
                       }
                   }
