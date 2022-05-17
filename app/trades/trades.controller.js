@@ -254,8 +254,8 @@ exports.responseCoinbaseCreateTrade = async(req, res) => {
                   if(getTrade.country === "GH"){
                       rateInLocalCurrencyObject =  rate.localCurrencyRate.find(x =>  tradeAmountInUsd >= x.minimumUsdValue  && tradeAmountInUsd <= x.maximumUsdValue)
                       if( typeof rateInLocalCurrencyObject === 'undefined'){
-                          console.log(localCurrencyRate[localCurrencyRate.length - 1])
-                          var rateInLocalCurrency = localCurrencyRate[localCurrencyRate.length - 1].cedisRateUsd
+                          //console.log(rate.localCurrencyRate[localCurrencyRate.length - 1])
+                          var rateInLocalCurrency = rate.localCurrencyRate[rate.localCurrencyRate.length - 1].cedisRateUsd
                       }else{
                           var rateInLocalCurrency = rateInLocalCurrencyObject.cedisRateUsd
                       }
@@ -263,10 +263,10 @@ exports.responseCoinbaseCreateTrade = async(req, res) => {
                   }else if(getTrade.country === "NG"){
                       rateInLocalCurrencyObject =  rate.localCurrencyRate.find(x =>  tradeAmountInUsd >= x.minimumUsdValue  && tradeAmountInUsd <= x.maximumUsdValue)
                       if( typeof rateInLocalCurrencyObject === 'undefined'){
-                          console.log(localCurrencyRate[localCurrencyRate.length - 1])
-                          var rateInLocalCurrency = localCurrencyRate[localCurrencyRate.length - 1].ngnRateUsd
+                          // console.log(localCurrencyRate[localCurrencyRate.length - 1])
+                          var rateInLocalCurrency = rate.localCurrencyRate[rate.localCurrencyRate.length - 1].ngnRateUsd
                       }else{
-                          console.log(x)
+                         // console.log(x)
                           var rateInLocalCurrency = rateInLocalCurrencyObject.ngnRateUsd
                       }
                   }
