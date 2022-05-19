@@ -7,6 +7,10 @@ const Transactions = db.transactions;
 const passwordUtils =require('../helpers/passwordUtils');
 const jwtTokenUtils = require('../helpers/jwtTokenUtils.js');
 const sendemail = require('../helpers/emailhelper.js');
+const Engage = require('@engage_so/js')
+//import Engage from '@engage_so/js'
+
+Engage.init(process.env.engageApiKey)
 
 const { signToken } = jwtTokenUtils;
 const uuid = require('uuid')
@@ -109,8 +113,17 @@ exports.createSeller = async(req,res)=>{
                                              console.log(saveauth)
                                                 if(saveauth._id){
                                                     const savemember = await  members.save()
-                                                    console.log(savemember)
                                                     if( savemember._id){
+
+                                                     Engage.identify({
+                                                            id: savemember._id,
+                                                            customer_username : username,
+                                                            email: email,
+                                                            number: phoneNumber.toString(),
+                                                            currency_tag:countryTag,
+                                                            customer_country:country ,
+                                                            reg_date: new Date()
+                                                     })
                                                                   
                                                    res.status(201).send({ status:200, message:"User  created"})
                                             
@@ -305,7 +318,17 @@ exports.signIn = async(req, res) => {
                                 const tokens = signToken( id, username, phoneNumber , email, isVerified, isEnabled, walletBalance, role, coinWallets, accountDetails, isSetPin, imageUrl,country, countryTag ) 
                                 let user = {}
                                 user.profile = { id,username, phoneNumber , email, isVerified, isEnabled, walletBalance, role, accountDetails, coinWallets, isSetPin, imageUrl,country, countryTag ,isAuthSecret,referralCode,referralBonusCount,referralBonusAmount} 
-                                user.token = tokens;                
+                                user.token = tokens;    
+                                
+                                if(role === "Seller"){
+                                     Engage.track(id, {
+                                        event: 'log_in',
+                                        timestamp: new Date(),
+                                        properties: {
+                                            login_date: new Date()
+                                        }
+                                       })
+                                }
                                 res.status(200).send({status:200,message:user})  
                             }
                         }  
@@ -568,6 +591,16 @@ exports.createAccountDetails = async(req,res)=>{
                         try{ 
                             const postAccountNumber = await Members.updateOne({_id: req.user.id}, { $addToSet: { accountDetails: [accountdetails] } } ) 
                             const findMemberById = await Members.findOne({_id: req.user.id})
+
+                            Engage.track(req.user.id, {
+                                event: 'bank_account',
+                                timestamp: new Date(),
+                                properties: {
+                                    account_name :accountName,
+                                    account_number: accountNumber,
+                                    bank_name: bankName
+                                }
+                               })
                     
                             res.status(200).send({  status:200,message:"Account details added succesfully", accountDetails : findMemberById.accountDetails})           
                             
@@ -602,6 +635,16 @@ exports.createAccountDetails = async(req,res)=>{
                         try{ 
                             const postAccountNumber = await Members.updateOne({_id: req.user.id}, { $addToSet: { accountDetails: [accountdetails] } } ) 
                             const findMemberById = await Members.findOne({_id: req.user.id})
+
+                            Engage.track(req.user.id, {
+                                event: 'bank_account',
+                                timestamp: new Date(),
+                                properties: {
+                                    account_name :accountName,
+                                    account_number: mobileNumber,
+                                    bank_name: mobileNetwork
+                                }
+                               })
                     
                             res.status(200).send({  status:200,message:"Account details added succesfully", accountDetails : findMemberById.accountDetails})           
                             
@@ -1039,7 +1082,10 @@ exports.createPin = async(req,res)=>{
                                 processEmail(emailFrom, emailTo, subject, link, link2, text, username);
                                 const updatePin = await Auths.findOneAndUpdate({ _id }, { pin: hashedPin });
                                 if(updatePin ){
-                                
+                                    Engage.track(req.user.id, {
+                                        event: 'pin_setup',
+                                        timestamp: new Date()
+                                       })
                                     const updateProfile = await Members.updateOne({ _id: req.user.id }, { isSetPin: true });
                                     res.status(201).send({ status:200, message:"User pin  created"})
                                 }else{
@@ -1116,7 +1162,10 @@ console.log(req.body)
                 const link = `${hostUrl}`;
                 const link2 = `${hostUrl2}`;
                  processEmail(emailFrom, emailTo, subject, link, link2, text, req.user.username);
-                  
+                 Engage.track(req.user.id, {
+                    event: 'change_pin',
+                    timestamp: new Date()
+                   })
                 res.status(200).send({  status:200, message:"Pin changed succesfully"})
                                  
              
@@ -1241,6 +1290,10 @@ exports.resetPin = async(req,res)=>{
                         const link2 = `${hostUrl2}`;
                         const username = getuser.username
                         processEmail(emailFrom, emailTo, subject, link, link2, text, username);
+                        Engage.track(_id, {
+                            event: 'reset_pin',
+                            timestamp: new Date()
+                        })
                         res.status(200).send({status:200,message:"Pin reset was successful"})
                     }            
                 }else{
@@ -1611,6 +1664,32 @@ exports.generateRefarralBonusExistingMembers = async(req,res)=>{
                   console.log("success")
               }                 
                res.status(201).send({ status: 201, message:"saved successfully "})
+        }catch(err){
+            console.log(err)
+            return res.status(500).send({ status: 500, message:"Error while saving "})
+        }       
+};
+
+
+exports.addExistingMembersToEngage = async(req,res)=>{ 
+    const findAllMembers = await Members.find({role: "Seller"})
+    console.log("findAllMembers.length")
+    console.log(findAllMembers.length)
+        try{
+            for( var i = 0; i < findAllMembers.length; i++){
+                   userId = findAllMembers[i]._id
+                   Engage.identify({
+                    id: findAllMembers[i]._id,
+                    customer_username : findAllMembers[i].username,
+                    email: findAllMembers[i].email,
+                    number: findAllMembers[i].phoneNumber,
+                    currency_tag:findAllMembers[i].countryTag,
+                    customer_country:findAllMembers[i].country ,
+                    reg_date: findAllMembers[i].createdAt
+             })
+                  console.log("success")
+              }                 
+               res.status(201).send({ status: 201, message:"All existimg members added succefully successfully "})
         }catch(err){
             console.log(err)
             return res.status(500).send({ status: 500, message:"Error while saving "})

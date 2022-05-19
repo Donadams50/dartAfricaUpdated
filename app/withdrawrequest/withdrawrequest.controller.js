@@ -12,6 +12,11 @@ const moment  = require('moment')
 const dotenv=require('dotenv');
       dotenv.config()
 
+const Engage = require('@engage_so/js')
+//import Engage from '@engage_so/js'
+
+Engage.init(process.env.engageApiKey)
+
 // withdraw  funds
 exports.withdrawFunds = async(req, res) => {
     
@@ -42,15 +47,30 @@ exports.withdrawFunds = async(req, res) => {
                                         const finalBalance  =  walletBalance - transAmount
                                         const minimumWithdrawer = parseFloat(findConfiguration.minimumWithdrawer) 
                                         const maximumWithdrawer = parseFloat(findConfiguration.maximumWithdrawer)
+                                        const nairaToDollarRate = parseFloat(findConfiguration.nairaToDollarRate) 
+                                        const cedisToDollarRate = parseFloat(findConfiguration.cedisToDollarRate)
                                         const enableAutomatedWithdrawer = findConfiguration.enableAutomatedWithdrawer
                                         const narration =  req.body.narration || "Fund withdrawer"
                                         const reference = uuid.v4()
-                                
+                                        
+                                        if(getUser.country === "Nigeria"){
+                                            transAmountUSD = transAmount / nairaToDollarRate
+                                        }else {
+                                            transAmountUSD = transAmount / cedisToDollarRate
+                                        }
+                                       
+                                        console.log("RATE")
+                                        console.log(cedisToDollarRate)
+                                        console.log(nairaToDollarRate)
+                                        console.log("transAmount")
                                          console.log(minimumWithdrawer)
-                                         console.log(transAmount)
+                                         console.log(transAmountUSD)
+                                         console.log(maximumWithdrawer)
+                                      
+
                                          console.log( enableAutomatedWithdrawer)
                                         if(walletBalance > transAmount ){
-                                            if(transAmount > minimumWithdrawer &&  transAmount < maximumWithdrawer ){
+                                            if(transAmountUSD > minimumWithdrawer &&  transAmountUSD < maximumWithdrawer ){
                                                 if(enableAutomatedWithdrawer === false ){
 
                                                     const transactions = new Transactions({      
@@ -129,11 +149,7 @@ exports.withdrawFunds = async(req, res) => {
                                                         console.log(makepayment.status)
                                                         console.log(makepayment.data.status)
                                                          //console.log(sendmoney.data)
-                                                    }
-                                                       
-                                                    
-
-                                                
+                                                    }                                   
                                                   
                                                    if (makepayment.status === 200  && makepayment.data.status === "success") {
                                                             if (makepayment.data.data.status === "SUCCESSFUL" && makepayment.data.data.complete_message === "Transaction was successful"  ) {
@@ -192,7 +208,18 @@ exports.withdrawFunds = async(req, res) => {
                                                                 const link = `${hostUrl}`;
                                                                 const link2 = `${hostUrl2}`;
                                                                 processEmail(emailFrom, emailTo, subject, link, link2, text, username);
-                                    
+                                                                Engage.track(_id, {
+                                                                    event: 'make_withdrawal',
+                                                                    timestamp: new Date(),
+                                                                    properties: {
+                                                                        amount: transAmount,
+                                                                        account_name: accountName,
+                                                                        account_number : accountNumber,
+                                                                        bank_name: bankName,
+                                                                        withdrawal_successful : true,
+                                                                        withdrawal_failed: false
+                                                                    }
+                                                                   })
                                                                 res.status(200).send({ status: 200, message:"Withdrawer succesfull"})
                                                             }else{
                                                                 const transactions = new Transactions({      
@@ -263,6 +290,8 @@ exports.withdrawFunds = async(req, res) => {
                                                    } 
                         
                                                 }
+
+                                            
                                             }else{
                                                 res.status(400).send({status: 400, message:"Minimum or Maximum withdrawer exceeded"})
                                             }
@@ -304,15 +333,21 @@ exports.withdrawFunds = async(req, res) => {
                                 const finalBalance  =  walletBalance - transAmount
                                 const minimumWithdrawer = parseFloat(findConfiguration.minimumWithdrawer) 
                                 const maximumWithdrawer = parseFloat(findConfiguration.maximumWithdrawer)
+                                const nairaToDollarRate = parseFloat(findConfiguration.nairaToDollarRate) 
+                                const cedisToDollarRate = parseFloat(findConfiguration.cedisToDollarRate)
                                 const enableAutomatedWithdrawer = findConfiguration.enableAutomatedWithdrawer
                                 const narration =  req.body.narration || "Mobile Wallet recharge"
                                 const reference = uuid.v4()
                                 const currency = "GHS"
                             
-                              
+                                if(getUser.country === "Nigeria"){
+                                    transAmountUSD = transAmount / nairaToDollarRate
+                                }else {
+                                    transAmountUSD = transAmount / cedisToDollarRate
+                                }
 
                                 if(walletBalance > transAmount ){
-                                    if(transAmount > minimumWithdrawer &&  transAmount < maximumWithdrawer ){
+                                    if(transAmountUSD >= minimumWithdrawer &&  transAmountUSD <= maximumWithdrawer ){
                                         if(enableAutomatedWithdrawer === false ){
                                             const withdrawrequest = new Withdrawrequest({      
                                                 status: "Pending",
@@ -425,7 +460,18 @@ exports.withdrawFunds = async(req, res) => {
                                                                 const link = `${hostUrl}`;
                                                                 const link2 = `${hostUrl2}`;
                                                                 processEmail(emailFrom, emailTo, subject, link, link2, text, username);
-                                    
+                                                                Engage.track(_id, {
+                                                                    event: 'make_withdrawal',
+                                                                    timestamp: new Date(),
+                                                                    properties: {
+                                                                        amount: transAmount,
+                                                                        account_name: accountName,
+                                                                        account_number : mobileNumber,
+                                                                        bank_name: mobileNetwork,
+                                                                        withdrawal_successful : true,
+                                                                        withdrawal_failed: false
+                                                                    }
+                                                                   })
                                                                 res.status(200).send({ status: 200, message:"Withdrawer succesfull"})
                                                         }else{
                                                         const transactions = new Transactions({      
@@ -491,6 +537,8 @@ exports.withdrawFunds = async(req, res) => {
                                                     // const updatePaymentStatus = await Trades.findOneAndUpdate({ _id }, { paymentStatus: "Failed" });  
                                                 } 
                                         }
+
+                                       
                                     }else{
                                         res.status(400).send({status: 400, message:"Minimum or Maximum withdrawer exceeded"})
                                     }
@@ -584,6 +632,19 @@ exports.cancelWithdrawerRequest = async(req, res) => {
                                                 accountType: getWithdrawerRequest.accountType
                                                 
                                             });
+
+                                            Engage.track(userId, {
+                                                event: 'make_withdrawal',
+                                                timestamp: new Date(),
+                                                properties: {
+                                                    amount: getWithdrawerRequest.amount,
+                                                    account_name: getWithdrawerRequest.accountName,
+                                                    account_number : getWithdrawerRequest.accountNumber,
+                                                    bank_name: getWithdrawerRequest.bankName,
+                                                    withdrawal_successful : false,
+                                                    withdrawal_failed: true
+                                                }
+                                               })
                                     }else{
                                             transactions = new Transactions({      
                                                 status: "Successful",
@@ -599,6 +660,18 @@ exports.cancelWithdrawerRequest = async(req, res) => {
                                                 accountType: getWithdrawerRequest.accountType
                                                 
                                             });
+                                            Engage.track(userId, {
+                                                event: 'make_withdrawal',
+                                                timestamp: new Date(),
+                                                properties: {
+                                                    amount: getWithdrawerRequest.amount,
+                                                    
+                                                    account_number : getWithdrawerRequest.mobileNumber,
+                                                    bank_name: getWithdrawerRequest.mobileNetwork,
+                                                    withdrawal_successful : false,
+                                                    withdrawal_failed: true
+                                                }
+                                               })
                                 }
                                     const saveTransaction = await  transactions.save()      
                                     const updateUserWallet = await Members.updateOne({_id:  userId }, { walletBalance: finalBalance.toFixed(2) });  
@@ -666,7 +739,33 @@ exports.manualSuccessWithdrawerRequest = async(req, res) => {
                         const link = `${hostUrl}`;
                         const link2 = `${hostUrl2}`;
                         processEmail(emailFrom, emailTo, subject, link, link2, text, username);
-    
+                        if (getWithdrawerRequest.accountType === "Bank"){
+                            Engage.track(userId, {
+                                event: 'make_withdrawal',
+                                timestamp: new Date(),
+                                properties: {
+                                    amount: getWithdrawerRequest.amount,
+                                    account_name: getWithdrawerRequest.accountName,
+                                    account_number : getWithdrawerRequest.accountNumber,
+                                    bank_name: getWithdrawerRequest.bankName,
+                                    withdrawal_successful : true,
+                                    withdrawal_failed: false
+                                }
+                               })
+                        }else{
+                            Engage.track(userId, {
+                                event: 'make_withdrawal',
+                                timestamp: new Date(),
+                                properties: {
+                                    amount: getWithdrawerRequest.amount,
+                                    account_name: getWithdrawerRequest.accountName,
+                                    account_number : getWithdrawerRequest.mobileNumber,
+                                    bank_name: getWithdrawerRequest.mobileNetwork,
+                                    withdrawal_successful : true,
+                                    withdrawal_failed: false
+                                }
+                               })
+                        }
                         res.status(200).send({ status: 200, message:"Manual success posted succesfully"})
               
 
@@ -953,6 +1052,34 @@ exports.updateFlutterResponse = async(req, res) => {
                     const link = `${hostUrl}`;
                     const link2 = `${hostUrl2}`;
                     processEmail(emailFrom, emailTo, subject, link, link2, text, username);
+                    if (getwithdrawerrequest.accountType === "Bank"){
+                        Engage.track(userId, {
+                            event: 'make_withdrawal',
+                            timestamp: new Date(),
+                            properties: {
+                                amount: getwithdrawerrequest.amount,
+                                account_name: getwithdrawerrequest.accountName,
+                                account_number : getwithdrawerrequest.accountNumber,
+                                bank_name: getwithdrawerrequest.bankName,
+                                withdrawal_successful : true,
+                                withdrawal_failed: false
+                            }
+                           })
+                    }else{
+                        Engage.track(userId, {
+                            event: 'make_withdrawal',
+                            timestamp: new Date(),
+                            properties: {
+                                amount: getwithdrawerrequest.amount,
+                                account_name: getwithdrawerrequest.accountName,
+                                account_number : getwithdrawerrequest.mobileNumber,
+                                bank_name: getwithdrawerrequest.mobileNetwork,
+                                withdrawal_successful : true,
+                                withdrawal_failed: false
+                            }
+                           })
+                    }
+                
                     res.status(200).send({message:"Success"})
               }else if (status === "FAILED" ) {
                                     const amount =  getwithdrawerrequest.amount
@@ -978,6 +1105,18 @@ exports.updateFlutterResponse = async(req, res) => {
                                                 branchName: getwithdrawerrequest.branchName
                                                 
                                             });
+                                            Engage.track(userId, {
+                                                event: 'make_withdrawal',
+                                                timestamp: new Date(),
+                                                properties: {
+                                                    amount: getwithdrawerrequest.amount,
+                                                    account_name: getwithdrawerrequest.accountName,
+                                                    account_number : getwithdrawerrequest.accountNumber,
+                                                    bank_name: getwithdrawerrequest.bankName,
+                                                    withdrawal_successful : false,
+                                                    withdrawal_failed: true
+                                                }
+                                               })
                                     }else{
                                             transactions = new Transactions({      
                                                 status: "Successful",
@@ -994,12 +1133,23 @@ exports.updateFlutterResponse = async(req, res) => {
                                                 accountName: getwithdrawerrequest.accountName
                                                 
                                             });
-                                }
-                                    const saveTransaction = await  transactions.save()      
-                                    const updateUserWallet = await Members.updateOne({_id:  userId }, { walletBalance: finalBalance.toFixed(2) });  
-                                        const updatePaymentStatus = await Withdrawrequest.updateOne({ _id : _id }, { status: "Declined" });  
-                                        const updateTransaction = await Transactions.updateOne({_id:  transactionId }, { status: "Failed" });
-
+                                            Engage.track(userId, {
+                                                event: 'make_withdrawal',
+                                                timestamp: new Date(),
+                                                properties: {
+                                                    amount: getwithdrawerrequest.amount,
+                                                    account_name: getwithdrawerrequest.accountName,
+                                                    account_number : getwithdrawerrequest.mobileNumber,
+                                                    bank_name: getwithdrawerrequest.mobileNetwork,
+                                                    withdrawal_successful : false,
+                                                    withdrawal_failed: true
+                                                }
+                                               })
+                                   }
+                                            const saveTransaction = await  transactions.save()      
+                                            const updateUserWallet = await Members.updateOne({_id:  userId }, { walletBalance: finalBalance.toFixed(2) });  
+                                            const updatePaymentStatus = await Withdrawrequest.updateOne({ _id : _id }, { status: "Declined" });  
+                                            const updateTransaction = await Transactions.updateOne({_id:  transactionId }, { status: "Failed" });
                                         res.status(200).send({message:"Success"})
   
               }else {

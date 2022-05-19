@@ -5,7 +5,10 @@ module.exports = mongoose => {
 
         minimumWithdrawer: Number,
         maximumWithdrawer : Number,
-        enableAutomatedWithdrawer : Boolean
+        enableAutomatedWithdrawer : Boolean,
+        nairaToDollarRate : Number,
+        cedisToDollarRate : Number
+
        
       },
       { timestamps: true }

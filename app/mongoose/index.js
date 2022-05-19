@@ -16,7 +16,7 @@ db.mongoose
     useFindAndModify: false 
   })
   .then(() => {
-    console.log("Connected to the database!");
+    console.log("Connected to the my database!");
   })
   .catch(err => {
     console.log("Cannot connect to the database!", err);

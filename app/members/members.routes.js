@@ -31,6 +31,7 @@ module.exports = app => {
      app.patch("/generate/refarral/code", verifyToken,  isSeller,  member.generateRefarralCode)
      app.patch("/refarral/code/existing/users", verifyToken,  isAdmin,  member.generateRefarralCodeForExistingMembers)
      app.patch("/bonus/existing/users", verifyToken,  isAdmin,  member.generateRefarralBonusExistingMembers)
+     app.patch("/add/existing/users/engage", verifyToken,  isAdmin,  member.addExistingMembersToEngage)
 }
 
 

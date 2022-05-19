@@ -17,10 +17,10 @@ exports.postConfiguration = async(req,res)=>{
         }
         
      
-        const { minimumWithdrawer, maximumWithdrawer,enableAutomatedWithdrawer } = req.body;
+        const { minimumWithdrawer, maximumWithdrawer,enableAutomatedWithdrawer,nairaToDollarRate, cedisToDollarRate } = req.body;
       
-        if ( minimumWithdrawer && maximumWithdrawer){
-              if ( minimumWithdrawer==="" || maximumWithdrawer=== "" ){
+        if ( minimumWithdrawer && maximumWithdrawer  && nairaToDollarRate && cedisToDollarRate){
+              if ( minimumWithdrawer==="" || maximumWithdrawer=== ""  || nairaToDollarRate === "" ||cedisToDollarRate === "" ){
                     res.status(400).send({
                         status: 400,
                         message:"Incorrect entry format"
@@ -45,7 +45,9 @@ exports.postConfiguration = async(req,res)=>{
                      const adminconfig = new Adminconfig({
                             minimumWithdrawer: minimumWithdrawer,
                             maximumWithdrawer: maximumWithdrawer,
-                            enableAutomatedWithdrawer : enableAutomatedWithdrawer
+                            enableAutomatedWithdrawer : enableAutomatedWithdrawer,
+                            nairaToDollarRate : nairaToDollarRate,
+                            cedisToDollarRate: cedisToDollarRate
                          });
                          const saveadminconfig = await adminconfig.save()
                          processEmail(emailFrom, emailTo, subject,  link, link2, message, name);
@@ -71,10 +73,10 @@ exports.updateConfiguration = async(req,res)=>{
     }
     const _id = req.params.id;
  
-    const { minimumWithdrawer, maximumWithdrawer,enableAutomatedWithdrawer } = req.body;
+    const { minimumWithdrawer, maximumWithdrawer,enableAutomatedWithdrawer,nairaToDollarRate, cedisToDollarRate  } = req.body;
   
-    if ( minimumWithdrawer && maximumWithdrawer){
-          if ( minimumWithdrawer==="" || maximumWithdrawer=== ""){
+    if ( minimumWithdrawer && maximumWithdrawer&& nairaToDollarRate && cedisToDollarRate){
+          if ( minimumWithdrawer==="" || maximumWithdrawer=== "" || nairaToDollarRate === "" ||cedisToDollarRate === "" ){
                 res.status(400).send({
                     status: 400,
                     message:"Incorrect entry format"
@@ -100,7 +102,9 @@ exports.updateConfiguration = async(req,res)=>{
                         _id : _id,
                         minimumWithdrawer: minimumWithdrawer,
                         maximumWithdrawer: maximumWithdrawer,
-                        enableAutomatedWithdrawer : enableAutomatedWithdrawer   
+                        enableAutomatedWithdrawer : enableAutomatedWithdrawer,
+                        nairaToDollarRate : nairaToDollarRate,
+                        cedisToDollarRate: cedisToDollarRate
                      });
                      console.log(adminconfig)
                      const updaterate = await Adminconfig.updateOne( {_id}, adminconfig)

@@ -12,6 +12,11 @@ const mongoose = require("mongoose");
 const dotenv=require('dotenv');
 dotenv.config();
 
+const Engage = require('@engage_so/js')
+//import Engage from '@engage_so/js'
+
+Engage.init(process.env.engageApiKey)
+
 const axios = require('axios');
 
 
@@ -47,6 +52,7 @@ exports.postNewTrade = async(req, res) => {
                           const emailList = await Members.find({ $or: [ { role: "Admin" }, { role: "SubAdmin" } ] })
   
                           const saveTrade = await  trades.save()
+                      
                           emailList.map(email => {
                              from = {
                                         name: process.env.emailName,
@@ -127,6 +133,7 @@ exports.postNewTrade = async(req, res) => {
                         const emailList = await Members.find({ $or: [ { role: "Admin" }, { role: "SubAdmin" } ] })
 
                         const saveTrade = await  trades.save()
+                        
                         emailList.map(email => {
                            from = {
                                       name: process.env.emailName,
@@ -218,6 +225,8 @@ exports.getTradeById = async (req, res) => {
          res.status(500).send({ status:500,message:"Error while getting trade by id "})
      }
 };
+
+
 // update trade status from coinbase
 exports.responseCoinbaseCreateTrade = async(req, res) => {
     const {  event, scheduled_for} = req.body;
@@ -234,8 +243,7 @@ exports.responseCoinbaseCreateTrade = async(req, res) => {
                 console.log("i am created")
                 res.status(200).send()
                 
-            }else if (event.type === "charge:confirmed")
-            {
+            }else if (event.type === "charge:confirmed"){
 
                   
                   console.log("i am confirmed")
@@ -308,6 +316,18 @@ exports.responseCoinbaseCreateTrade = async(req, res) => {
                           const link = `${hostUrl}`;
                           const link2 = `${hostUrl2}`;
                           processEmail(emailFrom, emailTo, subject, link, link2, text, username);
+                          Engage.track(req.user.id, {
+                            event: 'sell_coin',
+                            timestamp: new Date(),
+                            properties: {
+                                coin_type: coinBaseCurrency,
+                                amount_local_currency : tradeAmount,
+                                amount_usd: tradeAmountInUsd,
+                                amountt_coin: coinBaseAmount,
+                                order_successful : true,
+                                order_failed: false
+                            }
+                           })
                           res.status(200).send({status:200, message:"Success"})
                    }else{
                        res.status(200).send()
@@ -315,6 +335,18 @@ exports.responseCoinbaseCreateTrade = async(req, res) => {
 
             }else if  (event.type === "charge:failed"  ) {
                 console.log("i am failed")
+                Engage.track(getTrade.userId, {
+                  event: 'sell_coin',
+                  timestamp: new Date(),
+                  properties: {
+                      coin_type: getTrade.coinType,
+                      amount_local_currency : getTrade.amountInLocalCurrency,
+                      amount_usd: getTrade.amountInUSD,
+                      amountt_coin: getTrade.amounttInCoin,
+                      order_successful : false,
+                      order_failed: true
+                  }
+                 })
                 const updatePaymentStatus = await Trades.findOneAndUpdate({ _id }, { tradeStatus: "Failed" });  
                 res.status(200).send()
 
@@ -887,6 +919,7 @@ const fundReferredByWallet = async (sellerDetails) => {
 
 
 exports.responseLazerpayCreateTrade = async(req, res) => {
+
   
     console.log(req.body)
     const {  reference, status, coin, amountPaid} = req.body;
@@ -962,6 +995,19 @@ exports.responseLazerpayCreateTrade = async(req, res) => {
                           const emailTo = getSellersDetails.email
                           const link = `${hostUrl}`;
                           const link2 = `${hostUrl2}`;
+
+                          Engage.track(getSellersDetails._id, {
+                            event: 'sell_coin',
+                            timestamp: new Date(),
+                            properties: {
+                                coin_type: lazerpayCurrency,
+                                amount_local_currency : tradeAmount,
+                                amount_usd: tradeAmountInUsd,
+                                amountt_coin: amountPaid,
+                                order_successful : true,
+                                order_failed: false
+                            }
+                           })
                           processEmail(emailFrom, emailTo, subject, link, link2, text, username);
                           res.status(200).send({status:200, message:"Success"})
                    }else{
@@ -969,6 +1015,18 @@ exports.responseLazerpayCreateTrade = async(req, res) => {
                    }
 
             }else{
+              Engage.track(getTrade.userId, {
+                event: 'sell_coin',
+                timestamp: new Date(),
+                properties: {
+                    coin_type: getTrade.coinType,
+                    amount_local_currency : getTrade.amountInLocalCurrency,
+                    amount_usd: getTrade.amountInUSD,
+                    amountt_coin: getTrade.amounttInCoin,
+                    order_successful : false,
+                    order_failed: true
+                }
+               })
               console.log("i am nothing")
               res.status(200).send()
             }
