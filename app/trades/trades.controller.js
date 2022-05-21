@@ -154,7 +154,7 @@ exports.postNewTrade = async(req, res) => {
                         res.status(201).send({ status:201,message:{ walletAddress : address, uniqueId: getAddress.data.data.id,
                           code: getAddress.data.data.code ,
                           hostedUrl: getAddress.data.data.hosted_url, coinType: coinType, }})
-                }else{
+                  }else{
                   res.status(400).send({ status:400, message:"Error from coinbase "})
                 }
               }
@@ -234,6 +234,7 @@ exports.responseCoinbaseCreateTrade = async(req, res) => {
      console.log(event.data)
      console.log(event.type)
     try{
+      if (event.type === "charge:created")  return res.status(200).send()
         getTrade = await Trades.findOne({uniqueId: event.data.id})
         console.log("trade details")
         console.log(getTrade)
@@ -884,7 +885,6 @@ const fundReferredByWallet = async (sellerDetails) => {
     }
   };
 
-
  
 
   const lazerPayTrade = async (coinType ,amountInUsd, customerName, customerEmail) => {
@@ -1034,12 +1034,7 @@ exports.responseLazerpayCreateTrade = async(req, res) => {
         }else if (getTrade.tradeStatus === "Unresolved"){
               console.log("This trade must be resolved by admin")
               res.status(200).send()
-        // }else if (getTrade.tradeStatus === "Failed"){
-        //   console.log("This trade is failed already you cannot update it")
-        //   res.status(200).send()
-        // }else if (getTrade.tradeStatus === "Confirmed"){
-          console.log("This trade has been completed, you cant alter it again")
-          res.status(200).send()
+       
         }else{
               console.log("This trade has been completed or Invalid")
               res.status(200).send()

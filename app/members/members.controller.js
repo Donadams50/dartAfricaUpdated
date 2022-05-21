@@ -1621,7 +1621,6 @@ async function generateReferralCode(){
      }
 }
 
-
 async function generateAuthSecret(){
         try{
            return speakeasy.generateSecret()
@@ -1630,8 +1629,6 @@ async function generateAuthSecret(){
             return err
         }
 }
-
-
 
 exports.generateRefarralCodeForExistingMembers = async(req,res)=>{ 
         const findAllMembers = await Members.find({role: "Seller"})
@@ -1677,7 +1674,6 @@ exports.addExistingMembersToEngage = async(req,res)=>{
     console.log(findAllMembers.length)
         try{
             for( var i = 0; i < findAllMembers.length; i++){
-                   userId = findAllMembers[i]._id
                    Engage.identify({
                     id: findAllMembers[i]._id,
                     customer_username : findAllMembers[i].username,
