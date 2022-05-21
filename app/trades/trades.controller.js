@@ -317,7 +317,7 @@ exports.responseCoinbaseCreateTrade = async(req, res) => {
                           const link = `${hostUrl}`;
                           const link2 = `${hostUrl2}`;
                           processEmail(emailFrom, emailTo, subject, link, link2, text, username);
-                          Engage.track(getSellersDetails._id, {
+                          Engage.track(getTrade.userId, {
                             event: 'sell_coin',
                             timestamp: new Date(),
                             properties: {

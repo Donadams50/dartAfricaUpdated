@@ -170,14 +170,13 @@ exports.directDebit = async (req, res) => {
                   initialBalance: getSellersDetails.walletBalance ,
                   finalBalance: finalBalance.toFixed(2),
                   status : "Successful", 
-                  type: "Credit",
+                  type: "Debit",
                   narration: narration         
                 })
                 const postTransaction = await  transaction.save()
 
                 if(postTransaction){
                   const updateWallet= await Members.updateOne({ _id: getSellersDetails._id }, {walletBalance: finalBalance.toFixed(2)}); 
-
                   res.status(200).send({status:200, message:"Wallet debitted Successfully"})
                 }else{
                   res.status(400).send({status:400, message:"Error while debitting wallet"})
