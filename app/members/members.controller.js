@@ -1546,6 +1546,7 @@ exports.generateRefarralCode = async(req,res)=>{
 };
 
 
+
 // process email one
 async function processEmail(emailFrom, emailTo, subject, link, link2, text, fullName){
   try{
@@ -1686,6 +1687,23 @@ exports.addExistingMembersToEngage = async(req,res)=>{
                   console.log("success")
               }                 
                res.status(201).send({ status: 201, message:"All existimg members added succefully successfully "})
+        }catch(err){
+            console.log(err)
+            return res.status(500).send({ status: 500, message:"Error while saving "})
+        }       
+};
+
+exports.generateIsSetPinForExistingSubAdmin = async(req,res)=>{ 
+    const findAllSubAdmin = await Members.find({role: "SubAdmin"})
+    console.log("findAllSubAdmin.length")
+    console.log(findAllSubAdmin.length)
+        try{
+            for( var i = 0; i < findAllSubAdmin.length; i++){
+                   userId = findAllSubAdmin[i]._id
+                  const updateProfile = await Members.updateOne({ _id: userId }, { isSetPin: false });
+                  console.log("success")
+              }                 
+               res.status(201).send({ status: 201, message:"saved successfully "})
         }catch(err){
             console.log(err)
             return res.status(500).send({ status: 500, message:"Error while saving "})
