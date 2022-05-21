@@ -823,9 +823,9 @@ const fundReferredByWallet = async (sellerDetails) => {
     try {
       const findTrade = await Trades.find({userId : sellerDetails._id, tradeStatus: "Confirmed"})
       console.log(findTrade.length)
-      if(sellerDetails.countryTag === "GH"){
+      getReferredByDetails  =   await Members.findOne({_id:sellerDetails.referredBy})
+      if(getReferredByDetails.countryTag === "GH"){
         if(sellerDetails.referredBy && sellerDetails.referralBonusCount < process.env.totalRedeemableBonusCountGH && sellerDetails.referralBonusAmount < process.env.totalRedeemableBonusAmountGH && findTrade.length === 1 ){
-          getReferredByDetails  =   await Members.findOne({_id:sellerDetails.referredBy})
           const initialBalance = parseFloat(getReferredByDetails.walletBalance)
           const amount=  parseFloat(process.env.referralBonusGH)
           const finalBalance =  initialBalance + amount
@@ -849,7 +849,7 @@ const fundReferredByWallet = async (sellerDetails) => {
          )
         }
         console.log("i gave referral money gh" )
-   }else if(sellerDetails.countryTag === "NG"){
+   }else if(getReferredByDetails.countryTag === "NG"){
         if(getSellersDetails.referredBy && getSellersDetails.referralBonusCount < process.env.totalRedeemableBonusCountNG && getSellersDetails.referralBonusAmount < process.env.totalRedeemableBonusAmountNG  && findTrade.length === 1){
           getReferredByDetails  =   await Members.findOne({_id:sellerDetails.referredBy})
           const initialBalance = parseFloat(getReferredByDetails.walletBalance)
