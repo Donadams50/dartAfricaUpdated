@@ -29,10 +29,10 @@ module.exports = app => {
      app.patch("/generate/auth/secret", verifyToken,  isAdminOrSubadmin,  member.generateAuthSecret)
      app.patch("/verify/auth/code", verifyToken, isAdminOrSubadmin, member.validateAuthCode)
      app.patch("/generate/refarral/code", verifyToken,  isSeller,  member.generateRefarralCode)
-     app.patch("/refarral/code/existing/users", verifyToken,  isAdmin,  member.generateRefarralCodeForExistingMembers)
+     app.patch("/refarral/code/existing/users", verifyToken,  isAdminOrSubadmin,  member.generateRefarralCodeForExistingMembers)
      app.patch("/bonus/existing/users", verifyToken,  isAdminOrSubadmin,  member.generateRefarralBonusExistingMembers)
      app.patch("/add/existing/users/engage", verifyToken,  isAdminOrSubadmin,  member.addExistingMembersToEngage)
-     app.patch("/add/existing/users/engage", verifyToken,  isAdminOrSubadmin,  member.generateIsSetPinForExistingSubAdmin)
+     app.patch("/generate/issetpin/admin", verifyToken,  isAdminOrSubadmin,  member.generateIsSetPinForExistingSubAdmin)
 }
 
 

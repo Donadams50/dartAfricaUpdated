@@ -1694,13 +1694,13 @@ exports.addExistingMembersToEngage = async(req,res)=>{
 };
 
 exports.generateIsSetPinForExistingSubAdmin = async(req,res)=>{ 
-    const findAllSubAdmin = await Members.find({role: "SubAdmin"})
+    const findAllSubAdmin = await Members.find({ $or:[{'role': "SubAdmin"}, {'role': "Admin"} ] })
     console.log("findAllSubAdmin.length")
     console.log(findAllSubAdmin.length)
         try{
             for( var i = 0; i < findAllSubAdmin.length; i++){
                    userId = findAllSubAdmin[i]._id
-                  const updateProfile = await Members.updateOne({ _id: userId }, { isSetPin: false });
+                  const updateProfile = await Members.updateOne({ _id: userId }, { isAuthSecret: false });
                   console.log("success")
               }                 
                res.status(201).send({ status: 201, message:"saved successfully "})
