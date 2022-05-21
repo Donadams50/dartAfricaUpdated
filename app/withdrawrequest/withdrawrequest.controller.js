@@ -69,8 +69,8 @@ exports.withdrawFunds = async(req, res) => {
                                       
 
                                          console.log( enableAutomatedWithdrawer)
-                                        if(walletBalance > transAmount ){
-                                            if(transAmountUSD > minimumWithdrawer &&  transAmountUSD < maximumWithdrawer ){
+                                        if(walletBalance >= transAmount ){
+                                            if(transAmountUSD >= minimumWithdrawer &&  transAmountUSD <= maximumWithdrawer ){
                                                 if(enableAutomatedWithdrawer === false ){
 
                                                     const transactions = new Transactions({      
@@ -346,7 +346,7 @@ exports.withdrawFunds = async(req, res) => {
                                     transAmountUSD = transAmount / cedisToDollarRate
                                 }
 
-                                if(walletBalance > transAmount ){
+                                if(walletBalance >= transAmount ){
                                     if(transAmountUSD >= minimumWithdrawer &&  transAmountUSD <= maximumWithdrawer ){
                                         if(enableAutomatedWithdrawer === false ){
                                             const withdrawrequest = new Withdrawrequest({      
