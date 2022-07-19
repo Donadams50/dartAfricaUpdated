@@ -907,13 +907,11 @@ exports.flutterwaveWithdrawer = async(req, res) => {
                         account_bank= getWithdrawerRequest.bankCode
                         account_number = getWithdrawerRequest.accountNumber
                         amount = getWithdrawerRequest.amount
-                        narration = getWithdrawerRequest.narration || ""
                         bankBranch = getWithdrawerRequest.bankBranch
                         accountName = getWithdrawerRequest.accountName
-                        currency = "GHS"
+                        
                         narration = "Sent Fund by Admin"
-                        bankBranch = getWithdrawerRequest.bankBranch
-                        accountName = getWithdrawerRequest.accountName
+                    
                         
                         if(getUserDetails.country === "Ghana"){
                             currency = "GHS"

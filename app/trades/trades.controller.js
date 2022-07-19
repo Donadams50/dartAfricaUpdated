@@ -261,7 +261,7 @@ exports.responseCoinbaseCreateTrade = async(req, res) => {
                   tradeAmountInUsd  = parseFloat(coinBaseAmount) * parseFloat(rate.usdRateCoin) 
                   console.log(tradeAmountInUsd)
                   if(getTrade.country === "GH"){
-                      rateInLocalCurrencyObject =  rate.localCurrencyRate.find(x =>  tradeAmountInUsd >= x.minimumUsdValue  && tradeAmountInUsd <= x.maximumUsdValue)
+                      rateInLocalCurrencyObject = await rate.localCurrencyRate.find(x =>  tradeAmountInUsd >= x.minimumUsdValue  && tradeAmountInUsd <= x.maximumUsdValue)
                       if( typeof rateInLocalCurrencyObject === 'undefined'){
                           //console.log(rate.localCurrencyRate[localCurrencyRate.length - 1])
                           var rateInLocalCurrency = rate.localCurrencyRate[rate.localCurrencyRate.length - 1].cedisRateUsd
@@ -270,7 +270,7 @@ exports.responseCoinbaseCreateTrade = async(req, res) => {
                       }
 
                   }else if(getTrade.country === "NG"){
-                      rateInLocalCurrencyObject =  rate.localCurrencyRate.find(x =>  tradeAmountInUsd >= x.minimumUsdValue  && tradeAmountInUsd <= x.maximumUsdValue)
+                      rateInLocalCurrencyObject =  await rate.localCurrencyRate.find(x =>  tradeAmountInUsd >= x.minimumUsdValue  && tradeAmountInUsd <= x.maximumUsdValue)
                       if( typeof rateInLocalCurrencyObject === 'undefined'){
                           // console.log(localCurrencyRate[localCurrencyRate.length - 1])
                           var rateInLocalCurrency = rate.localCurrencyRate[rate.localCurrencyRate.length - 1].ngnRateUsd
@@ -930,7 +930,7 @@ exports.responseLazerpayCreateTrade = async(req, res) => {
         console.log(getTrade)
          _id = getTrade._id;
         if(getTrade.tradeStatus === "Created"  || getTrade.tradeStatus === "Failed" ){
-           if (status === "confirmed"){
+           
                   console.log("i am confirmed")
                   lazerpayAmount = amountPaid
                   lazerpayCurrency = coin
@@ -1009,27 +1009,12 @@ exports.responseLazerpayCreateTrade = async(req, res) => {
                             }
                            })
                           processEmail(emailFrom, emailTo, subject, link, link2, text, username);
-                          res.status(200).send({status:200, message:"Success"})
+                          res.status(200).send()
                    }else{
-                       res.status(200).send()
+                       res.status(400).send()
                    }
 
-            }else{
-              Engage.track(getTrade.userId, {
-                event: 'sell_coin',
-                timestamp: new Date(),
-                properties: {
-                    coin_type: getTrade.coinType,
-                    amount_local_currency : getTrade.amountInLocalCurrency,
-                    amount_usd: getTrade.amountInUSD,
-                    amountt_coin: getTrade.amounttInCoin,
-                    order_successful : false,
-                    order_failed: true
-                }
-               })
-              console.log("i am nothing")
-              res.status(200).send()
-            }
+           
       
         }else if (getTrade.tradeStatus === "Unresolved"){
               console.log("This trade must be resolved by admin")

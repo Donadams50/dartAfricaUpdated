@@ -4,7 +4,8 @@ module.exports = mongoose => {
         email:String,
         password: String,
         pin: String,
-        authSecret: Object
+        authSecret: Object,
+        currentToken: String
       },
       { timestamps: true }
     );

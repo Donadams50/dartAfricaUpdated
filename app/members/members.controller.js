@@ -303,6 +303,7 @@ exports.signIn = async(req, res) => {
                 if(User){
                     const retrievedPassword = Auth.password
                     const id = User._id;
+                    const _id = Auth._id
                     const {  username,    phoneNumber, email, isVerified, isEnabled, walletBalance , role, coinWallets, isSetPin, imageUrl, country, countryTag, isAuthSecret,referralCode,referralBonusCount,referralBonusAmount } = User
                     const accountDetails = User.accountDetails || []
                     const isMatch = await passwordUtils.comparePassword(password, retrievedPassword);
@@ -319,7 +320,7 @@ exports.signIn = async(req, res) => {
                                 let user = {}
                                 user.profile = { id,username, phoneNumber , email, isVerified, isEnabled, walletBalance, role, accountDetails, coinWallets, isSetPin, imageUrl,country, countryTag ,isAuthSecret,referralCode,referralBonusCount,referralBonusAmount} 
                                 user.token = tokens;    
-                                
+                                const saveToken = await Auths.findOneAndUpdate({ _id }, { currentToken: tokens });
                                 if(role === "Seller"){
                                      Engage.track(id, {
                                         event: 'log_in',
